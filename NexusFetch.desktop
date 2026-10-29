@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Nexus Fetch
+Comment=Downloader Desktop Moderno para YouTube, Twitter e Instagram
+Exec=NexusFetch %u
+Icon=icon
+Terminal=false
+Categories=Network;AudioVideo;Video;
+StartupWMClass=NexusFetch
+Keywords=download;youtube;twitter;instagram;media;video;audio;
