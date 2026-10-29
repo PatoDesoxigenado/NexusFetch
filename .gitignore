@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller temporary build artifacts
+build/
+*.spec
+
+# Pytest & environments
+.pytest_cache/
+.env
+.venv/
+venv/
+ENV/
+
+# System & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime logs
+logs/
+*.log
