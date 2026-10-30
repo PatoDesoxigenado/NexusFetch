@@ -1,6 +1,7 @@
 """Gerenciador de download assíncrono para Vídeos, Áudios, GIFs e Imagens."""
 import os
 import sys
+import time
 import shutil
 import subprocess
 import threading
@@ -9,6 +10,37 @@ from typing import Callable, Optional
 import yt_dlp
 from src.utils.helpers import format_bytes, format_duration, sanitize_filename
 from src.utils.diagnostics import find_ffmpeg
+
+class SpeedSmoother:
+    """Calcula velocidade real suave e filtra picos de buffers e caches."""
+    def __init__(self, alpha: float = 0.25):
+        self.alpha = alpha
+        self.smoothed_speed: float = 0.0
+        self.last_bytes: int = 0
+        self.last_time: float = 0.0
+
+    def update(self, current_bytes: int, yt_speed: Optional[float] = None) -> float:
+        now = time.time()
+        if self.last_time == 0.0:
+            self.last_time = now
+            self.last_bytes = current_bytes
+            self.smoothed_speed = yt_speed or 0.0
+            return self.smoothed_speed
+
+        delta_time = now - self.last_time
+        if delta_time >= 0.25:
+            delta_bytes = max(0, current_bytes - self.last_bytes)
+            inst_speed = delta_bytes / delta_time
+            if self.smoothed_speed <= 0.0:
+                self.smoothed_speed = inst_speed
+            else:
+                self.smoothed_speed = self.alpha * inst_speed + (1.0 - self.alpha) * self.smoothed_speed
+            self.last_time = now
+            self.last_bytes = current_bytes
+
+        if self.smoothed_speed <= 0.0 and yt_speed:
+            return yt_speed
+        return self.smoothed_speed
 
 class MediaDownloader:
     def __init__(self):
@@ -77,6 +109,7 @@ class MediaDownloader:
             playlist_dir = os.path.join(output_dir, safe_title)
             os.makedirs(playlist_dir, exist_ok=True)
 
+            playlist_start_time = time.time()
             success_count = 0
             for idx, item in enumerate(selected_items, 1):
                 if self._is_cancelled:
@@ -85,32 +118,56 @@ class MediaDownloader:
                     return
 
                 if on_status:
-                    on_status(f"[{idx}/{total_sel}] Baixando: {item.title[:45]}...")
+                    on_status(f"[{idx}/{total_sel}] Conectando: {item.title[:40]}...")
 
-                def make_progress_hook(item_idx, total_items):
+                item_smoother = SpeedSmoother()
+
+                def make_progress_hook(item_idx, total_items, item_title, smoother):
                     def hook(d):
                         if self._is_cancelled:
                             raise Exception("Download cancelado pelo usuário.")
-                        if d.get("status") == "downloading":
+                        status = d.get("status")
+                        if status == "downloading":
                             tot = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                             dl = d.get("downloaded_bytes") or 0
                             video_pct = (dl / tot * 100.0) if tot > 0 else 0.0
                             overall_pct = ((item_idx - 1) / total_items * 100.0) + (video_pct / total_items)
+                            overall_pct = min(99.9, max(0.0, overall_pct))
 
-                            speed = d.get("speed")
-                            speed_str = f"{format_bytes(speed)}/s" if speed else "-- KB/s"
-                            eta = d.get("eta")
-                            eta_str = f"ETA: {format_duration(eta)}" if eta is not None else "ETA: --:--"
-                            fname = os.path.basename(d.get("filename", ""))
+                            speed = smoother.update(dl, d.get("speed"))
+                            speed_str = f"{format_bytes(speed)}/s" if speed > 0 else "-- KB/s"
+
+                            elapsed = time.time() - playlist_start_time
+                            if overall_pct >= 2.0 and elapsed >= 1.5:
+                                total_est_sec = elapsed / (overall_pct / 100.0)
+                                remaining_sec = max(0, int(total_est_sec - elapsed))
+                                eta_str = f"ETA: {format_duration(remaining_sec)}"
+                            else:
+                                remaining_bytes = max(0, tot - dl)
+                                if speed > 0 and remaining_bytes > 0:
+                                    calc_video_eta = int(remaining_bytes / speed)
+                                    eta_str = f"ETA: {format_duration(calc_video_eta)}"
+                                else:
+                                    yt_eta = d.get("eta")
+                                    if yt_eta and yt_eta > 0:
+                                        eta_str = f"ETA: {format_duration(yt_eta)}"
+                                    else:
+                                        eta_str = "ETA: --:--"
+
+                            title_snippet = (item_title[:32] + "...") if len(item_title) > 32 else item_title
                             if on_progress:
-                                on_progress(overall_pct, speed_str, eta_str, f"[{item_idx}/{total_items}] {fname}")
+                                on_progress(overall_pct, speed_str, eta_str, f"[{item_idx}/{total_items}] {title_snippet}")
+
+                        elif status == "finished":
+                            if on_status:
+                                on_status(f"[{item_idx}/{total_items}] Mesclando e finalizando com FFmpeg...")
                     return hook
 
                 item_outtmpl = os.path.join(playlist_dir, f"{item.index:02d} - %(title)s.%(ext)s")
 
                 ydl_opts_item = {
                     "outtmpl": item_outtmpl,
-                    "progress_hooks": [make_progress_hook(idx, total_sel)],
+                    "progress_hooks": [make_progress_hook(idx, total_sel, item.title, item_smoother)],
                     "quiet": True,
                     "no_warnings": True,
                     "nocheckcertificate": True,
@@ -289,6 +346,7 @@ class MediaDownloader:
         # -------------------------------------------------------------
         outtmpl = os.path.join(output_dir, "%(title)s.%(ext)s")
         downloaded_file_path = ""
+        single_smoother = SpeedSmoother()
 
         def progress_hook(d):
             if self._is_cancelled:
@@ -299,12 +357,21 @@ class MediaDownloader:
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                 downloaded = d.get("downloaded_bytes") or 0
                 percent = (downloaded / total * 100.0) if total > 0 else 0.0
+                percent = min(99.9, max(0.0, percent))
                 
-                speed = d.get("speed")
-                speed_str = f"{format_bytes(speed)}/s" if speed else "-- KB/s"
+                speed = single_smoother.update(downloaded, d.get("speed"))
+                speed_str = f"{format_bytes(speed)}/s" if speed > 0 else "-- KB/s"
                 
-                eta = d.get("eta")
-                eta_str = f"ETA: {format_duration(eta)}" if eta is not None else "ETA: --:--"
+                remaining = max(0, total - downloaded)
+                if speed > 0 and remaining > 0:
+                    calc_eta = int(remaining / speed)
+                    eta_str = f"ETA: {format_duration(calc_eta)}"
+                else:
+                    yt_eta = d.get("eta")
+                    if yt_eta and yt_eta > 0:
+                        eta_str = f"ETA: {format_duration(yt_eta)}"
+                    else:
+                        eta_str = "ETA: --:--"
                 
                 filename = os.path.basename(d.get("filename", ""))
                 if on_progress:
@@ -312,7 +379,7 @@ class MediaDownloader:
 
             elif status == "finished":
                 if on_status:
-                    on_status("Processando e finalizando arquivo...")
+                    on_status("Processando e finalizando com FFmpeg...")
 
         ydl_opts = {
             "outtmpl": outtmpl,

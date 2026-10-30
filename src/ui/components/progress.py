@@ -146,7 +146,10 @@ class DownloadActionSection(ctk.CTkFrame):
     def update_progress(self, percent: float, speed_str: str, eta_str: str, filename: str):
         """Atualiza porcentagem, velocidade e tempo restante."""
         self.progress_bar.set(percent / 100.0)
-        self.lbl_status.configure(text=f"Baixando: {percent:.1f}%")
+        if filename and filename.startswith("["):
+            self.lbl_status.configure(text=f"{filename} • {percent:.1f}%")
+        else:
+            self.lbl_status.configure(text=f"Baixando: {percent:.1f}%")
         self.lbl_speed.configure(text=speed_str)
         self.lbl_eta.configure(text=eta_str)
 

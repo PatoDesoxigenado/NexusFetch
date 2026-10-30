@@ -1,6 +1,6 @@
 # 🔻 Nexus Fetch
 
-Um aplicativo desktop moderno, rápido e sem complicações para baixar mídias de diversas plataformas (YouTube, Twitter/X e Instagram). Com uma interface limpa desenvolvida em **CustomTkinter** (tema escuro de alto contraste em Vermelho, Preto e Branco), você pode baixar vídeos, áudios (MP3), animações (.GIF) e imagens em resolução máxima, sem precisar lidar com linhas de comando.
+Um aplicativo desktop moderno, rápido e sem complicações para baixar mídias de diversas plataformas (YouTube, Twitter/X e Instagram). Com uma interface limpa desenvolvida em **CustomTkinter** (tema escuro de alto contraste em Vermelho, Preto e Branco), você pode baixar vídeos, áudios (MP3), animações (.GIF), imagens e playlists completas em resolução máxima, sem precisar lidar com linhas de comando.
 
 ---
 
@@ -22,21 +22,26 @@ Um aplicativo desktop moderno, rápido e sem complicações para baixar mídias 
   - **Fotos e Posts:** Extração inteligente e download de imagens em resolução máxima original (`.jpg`), com contorno transparente de restrições de login/TLS.
   - **Reels e Vídeos:** Download direto em formato `.mp4` de alta qualidade.
   - **Metadados Completos:** Título, autor e capa carregados instantaneamente.
-- **Módulo YouTube & Playlists:**
-  - Download de Vídeo (MP4) com seleção de resoluções dinâmicas (720p, 1080p, 1440p até 4K UHD).
-  - Download de Áudio puro (MP3) com conversão automática na qualidade máxima de 320 kbps e metadados ID3.
-  - **Suporte Completo a Playlists:**
-    - Extração ultra-rápida de todos os vídeos da playlist em lote.
-    - **Lista Interativa Paginada:** Exibe até 30 vídeos por seção com controles de página (`◀ Anterior` e `Próxima ▶`).
-    - **Controle Individual de Seleção:** Checkboxes por vídeo para escolher exatamente quais vídeos baixar, evitando downloads indesejados.
-    - **Ações Rápidas:** Botões para `Marcar Todos` e `Desmarcar Todos` com persistência de estado entre páginas.
-    - Organização automática dos downloads na pasta com o nome da playlist (`01 - Nome.mp4`, `02 - Nome.mp4`, etc.).
-  - Download de Thumbnail em alta resolução com um clique.
+- **Módulo YouTube & Playlists Completas:**
+  - **Vídeo Único (MP4):** Download com seleção de resoluções dinâmicas (720p, 1080p, 1440p 2K até 2160p 4K UHD).
+  - **Áudio Puro (MP3):** Conversão automática na qualidade máxima de 320 kbps e metadados ID3 embutidos.
+  - **Suporte Avançado a Playlists do YouTube:**
+    - Extração rápida de todos os vídeos da playlist em lote.
+    - **Lista Interativa Paginada:** Exibe 30 vídeos por página com navegação fluida (`◀ Anterior` e `Próxima ▶`).
+    - **Seleção Individual por Checkbox:** Marque ou desmarque vídeos individualmente para baixar apenas o que desejar.
+    - **Ações Rápidas em Massa:** Botões `Marcar Todos` e `Desmarcar Todos` com persistência de marcação entre páginas.
+    - **Seleção de Qualidade Completa:** Opções de 4K UHD, 2K QHD, 1080p FHD, 720p HD até 360p para downloads da playlist.
+    - **Organização Automática em Subpastas:** Os vídeos baixados da playlist são organizados em uma pasta própria com o nome da playlist e arquivos numerados ordenadamente (`01 - Nome.mp4`, `02 - Nome.mp4`, etc.).
+  - **Download de Thumbnail:** Download direto da capa/miniatura em resolução máxima com um clique.
+- **Telemetria Precisa e Suavizada de Velocidade e Tempo:**
+  - Amortecedor inteligente de velocidade (`SpeedSmoother` com média móvel exponencial) para eliminar picos ilusórios de buffers/caches e refletir a velocidade real da conexão.
+  - Estimativa realista de tempo restante (ETA), evitando contadores zerados prematuramente e calculando com exatidão o tempo restante da playlist inteira.
+  - Status informativo de cada fase (download do vídeo, download do áudio e mesclagem final com FFmpeg).
 - **Prévia de Tamanho Estimado de Arquivo:**
-  - O menu de seleção de qualidade exibe o tamanho aproximado de cada arquivo antes de iniciar o download (ex: `1080p (FHD) ~ 136.1 MB`, `MP3 320 kbps ~ 8.7 MB`, `Imagem ~ 201.5 KB`).
-- **Auto-Diagnóstico de Inicialização & Instalação Automática do FFmpeg (1-Clique):**
-  - Ao abrir o app (inclusive no executável), uma rotina instantânea verifica a presença do `FFmpeg`, conexão com a internet e permissões de escrita.
-  - **Instalador Automático do FFmpeg:** Caso o computador não tenha o FFmpeg, o app oferece um botão de instalação automática direta que baixa, extrai e configura os binários do FFmpeg sem que o usuário precise abrir o navegador ou configurar variáveis de ambiente.
+  - O menu de seleção de qualidade exibe o tamanho aproximado de cada arquivo antes de iniciar o download (ex: `2160p (4K UHD) ~ 12.3 GB`, `1080p (FHD) ~ 2.4 GB`, `MP3 320 kbps ~ 8.7 MB`, `Imagem ~ 201.5 KB`).
+- **Auto-Diagnóstico & Instalação Automática do FFmpeg (1-Clique):**
+  - Checagem automática de ambiente ao abrir o app (presença do FFmpeg, internet e permissões de escrita).
+  - **Instalador Automático Integrado:** Se o sistema não tiver o FFmpeg, o app oferece um botão de instalação automática direta que baixa, extrai e configura os binários do FFmpeg sem necessidade de abrir navegador ou configurar variáveis de ambiente.
 
 ---
 
@@ -55,12 +60,12 @@ Um aplicativo desktop moderno, rápido e sem complicações para baixar mídias 
 
 ### Pré-requisitos
 - **Python 3.9+** (recomendado Python 3.11+)
-- **FFmpeg** instalado e adicionado ao PATH do sistema
+- **FFmpeg** (instalado no sistema ou baixado automaticamente pelo botão no primeiro uso)
 
 ### Instalação
 ```bash
-# 1. Clone ou baixe o repositório
-git clone https://github.com/seu-usuario/NexusFetch.git
+# 1. Clone o repositório
+git clone https://github.com/PatoDesoxigenado/NexusFetch.git
 cd NexusFetch
 
 # 2. Instale as dependências
@@ -74,7 +79,7 @@ python main.py
 
 ## 🧪 Testes Automatizados
 
-O projeto conta com suíte de testes unitários para validadores regex, extração de metadados, estimativa de tamanhos e rotinas de diagnóstico:
+O projeto conta com suíte de testes unitários para validadores regex, detecção de playlists, extração de metadados, estimativa de tamanhos e rotinas de diagnóstico:
 
 ```bash
 python -m pytest tests/
@@ -101,16 +106,17 @@ Para gerar o executável nativo de sistemas Linux (`dist/NexusFetch`):
 
 > **⚠️ Importante sobre o Git Bash:** O Git Bash no Windows executa o Python do Windows (gerando `.exe`). Para compilar um binário nativo de Linux (formato ELF), execute em uma máquina Linux real ou pelo WSL do Windows.
 
-- **Opção A: Em uma máquina ou Máquina Virtual Linux (Ubuntu, Debian, Fedora, Arch):**
+- **Opção A: No Windows via WSL (com 1 clique ou terminal):**
+  - Dê um duplo clique no arquivo `build_linux_via_wsl.bat`
+  - Ou execute via terminal:
+    ```cmd
+    wsl -d Ubuntu -- bash -c 'cd "$(wslpath -u "$PWD")" && ./build_linux.sh'
+    ```
+
+- **Opção B: Em uma máquina ou Máquina Virtual Linux (Ubuntu, Debian, Fedora, Arch):**
   ```bash
   chmod +x build_linux.sh
   ./build_linux.sh
-  ```
-  *(Ou: `python3 build_linux.py`)*
-
-- **Opção B: No Windows via WSL (Windows Subsystem for Linux):**
-  ```cmd
-  wsl -d Ubuntu -- bash -c 'cd "$(wslpath -u "$PWD")" && ./build_linux.sh'
   ```
 
 - **Integração com Desktop Linux:**
@@ -122,27 +128,52 @@ Para gerar o executável nativo de sistemas Linux (`dist/NexusFetch`):
 
 ```
 NexusFetch/
-├── README.md                # Documentação completa do sistema
-├── requirements.txt         # Dependências do projeto
-├── main.py                  # Ponto de entrada da aplicação
-├── build_exe.py             # Script de compilação para Windows (.exe)
-├── build.bat                # Script em lote para compilação rápida no Windows
-├── build_linux.py           # Script de compilação para Linux (Python)
-├── build_linux.sh           # Script de compilação para Linux (Bash)
-├── NexusFetch.desktop       # Atalho XDG de menu para sistemas Linux
-├── assets/                  # Ícones e recursos visuais (.ico e .png)
-├── src/
-│   ├── config.py            # Configurações globais, paths e constantes
-│   ├── utils/
-│   │   ├── helpers.py       # Formatação de bytes, tempo e nomes de arquivos
-│   │   ├── diagnostics.py   # Checagem de ambiente (FFmpeg, internet, escrita)
-│   │   └── validators.py    # Validação regex e detecção cruzada inteligente
-│   ├── core/
-│   │   ├── metadata.py      # Extração de metadados, frames e renovação de cache
-│   │   └── downloader.py    # Motor de download assíncrono (Vídeo, Áudio, GIF, Imagem)
-│   └── ui/
-│       ├── app.py           # Janela principal com área rolável e botão ancorado
-│       ├── theme.py         # Paleta de cores, tipografia e design system
-│       └── components/      # Componentes modulares (Navbar, Preview, FormatBar, Progress)
-└── tests/                   # Suíte de testes automatizados com pytest
+├── .gitattributes             # Regras de normalização de quebras de linha (LF para Linux, CRLF para Windows)
+├── .gitignore                 # Arquivos e diretórios ignorados pelo controle de versão
+├── NexusFetch.desktop         # Atalho de integração com o menu de aplicativos no Linux (XDG)
+├── README.md                  # Documentação completa e guia do projeto
+├── requirements.txt           # Dependências Python (CustomTkinter, yt-dlp, Pillow, curl_cffi, etc.)
+├── main.py                    # Ponto de entrada da aplicação
+├── build.bat                  # Script de compilação em 1-clique para Windows
+├── build_exe.py               # Automação de compilação PyInstaller para Windows (.exe)
+├── build_linux.py             # Script de compilação para Linux (Python)
+├── build_linux.sh             # Script de compilação para Linux (Bash standalone)
+├── build_linux_via_wsl.bat    # Atalho para compilar o binário Linux a partir do Windows via WSL
+├── dist/                      # Binários executáveis prontos para uso
+│   ├── NexusFetch.exe         # Executável portátil para Windows 10/11
+│   └── NexusFetch             # Executável ELF 64-bit nativo para Linux
+├── assets/                    # Identidade visual e ícones do aplicativo
+│   ├── icon.ico               # Ícone em formato Windows Icon
+│   └── icon.png               # Ícone em formato PNG de alta resolução
+├── logs/                      # Diretório de logs de execução (ignorado no Git)
+│   └── nexus.log              # Registro de eventos e diagnósticos de execução
+├── src/                       # Código-fonte modular da aplicação
+│   ├── __init__.py
+│   ├── config.py              # Constantes globais, temas, dimensões e caminhos de assets
+│   ├── core/                  # Mecanismos centrais de dados e download
+│   │   ├── __init__.py
+│   │   ├── downloader.py      # Motor de download assíncrono (Vídeos, Áudios, GIFs, Fotos e Playlists)
+│   │   └── metadata.py        # Extração de metadados, capas, frames e suporte a playlists
+│   ├── ui/                    # Interface gráfica do usuário (CustomTkinter)
+│   │   ├── __init__.py
+│   │   ├── app.py             # Janela principal com fila thread-safe e orquestração de eventos
+│   │   ├── theme.py           # Sistema de design (cores Nexus Red, tipografia e espaçamentos)
+│   │   └── components/        # Componentes visuais modulares
+│   │       ├── __init__.py
+│   │       ├── diag_modal.py  # Modal de diagnóstico inicial com instalador do FFmpeg
+│   │       ├── format_bar.py  # Barra de escolha de formatos, resoluções e diretório
+│   │       ├── navbar.py      # Barra de navegação superior entre plataformas
+│   │       ├── preview.py     # Card de prévia da mídia e lista interativa paginada de playlists
+│   │       ├── progress.py    # Barra de progresso, métricas em tempo real e botão de ação
+│   │       └── url_input.py   # Campo de inserção de URL com detecção cruzada inteligente
+│   └── utils/                 # Módulos utilitários e diagnósticos
+│       ├── __init__.py
+│       ├── diagnostics.py     # Verificação de ambiente e instalador automático de FFmpeg
+│       ├── helpers.py         # Formatadores de bytes, durações e higienização de arquivos
+│       ├── logger.py          # Gerenciamento de logs thread-safe do sistema
+│       └── validators.py      # Validação regex de URLs e detecção de playlists
+└── tests/                     # Suíte de testes automatizados com pytest
+    ├── test_diagnostics.py    # Testes de verificação de ambiente e permissões
+    ├── test_downloader.py     # Testes de download, estrutura de playlists e cancelamento
+    └── test_validators.py     # Testes de detecção de plataformas e URLs de playlists
 ```

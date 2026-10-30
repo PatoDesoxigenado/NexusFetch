@@ -329,7 +329,9 @@ def _process_playlist_info(url: str, info: Dict, start_t: float) -> MediaMetadat
         p_thumb = playlist_items[0].thumbnail_url
 
     qualities = [
-        VideoQualityOption(label="🌟 Máxima Resolução (HD)", height=None, format_id="bestvideo+bestaudio/best"),
+        VideoQualityOption(label="🌟 Máxima Resolução (Melhor Qualidade)", height=None, format_id="bestvideo+bestaudio/best"),
+        VideoQualityOption(label="2160p (4K UHD)", height=2160, format_id="bestvideo[height<=2160]+bestaudio/best[height<=2160]"),
+        VideoQualityOption(label="1440p (2K QHD)", height=1440, format_id="bestvideo[height<=1440]+bestaudio/best[height<=1440]"),
         VideoQualityOption(label="1080p (FHD)", height=1080, format_id="bestvideo[height<=1080]+bestaudio/best[height<=1080]"),
         VideoQualityOption(label="720p (HD)", height=720, format_id="bestvideo[height<=720]+bestaudio/best[height<=720]"),
         VideoQualityOption(label="480p", height=480, format_id="bestvideo[height<=480]+bestaudio/best[height<=480]"),
