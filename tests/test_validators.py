@@ -1,7 +1,7 @@
 """Testes unitários para validação de URLs e detecção cruzada."""
 import pytest
 from src.config import MODULE_YOUTUBE, MODULE_INSTAGRAM, MODULE_TWITTER
-from src.utils.validators import validate_url, detect_platform, ValidationStatus
+from src.utils.validators import validate_url, detect_platform, is_playlist_url, ValidationStatus
 
 def test_detect_youtube_urls():
     urls = [
@@ -9,10 +9,31 @@ def test_detect_youtube_urls():
         "https://youtu.be/dQw4w9WgXcQ",
         "https://youtube.com/shorts/dQw4w9WgXcQ",
         "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
-        "http://m.youtube.com/watch?v=dQw4w9WgXcQ"
+        "http://m.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com/playlist?list=PLrAXtmErZgOdP_8GzKtKC44zvw_CozUpz",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOdP_8GzKtKC44zvw_CozUpz"
     ]
     for u in urls:
         assert detect_platform(u) == MODULE_YOUTUBE
+
+def test_is_playlist_url():
+    playlist_urls = [
+        "https://www.youtube.com/playlist?list=PL4cUxeGkcC9gC88BEo9czgyS72A3doDeM",
+        "https://youtube.com/playlist?list=PLrAXtmErZgOdP_8GzKtKC44zvw_CozUpz",
+        "https://www.youtube.com/watch?v=etSN4X_fCnM&list=PL4cUxeGkcC9gC88BEo9czgyS72A3doDeM",
+        "youtube.com/playlist?list=PL123456789"
+    ]
+    for u in playlist_urls:
+        assert is_playlist_url(u) is True
+
+    single_urls = [
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://youtu.be/dQw4w9WgXcQ",
+        "https://twitter.com/jack/status/20",
+        "https://www.instagram.com/p/C-xyz123abc/"
+    ]
+    for u in single_urls:
+        assert is_playlist_url(u) is False
 
 def test_detect_twitter_urls():
     urls = [

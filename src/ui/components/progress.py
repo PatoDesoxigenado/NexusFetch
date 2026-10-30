@@ -114,7 +114,7 @@ class DownloadActionSection(ctk.CTkFrame):
         )
         self.btn_download.pack(side="right", fill="x", expand=True)
 
-    def show_ready_state(self):
+    def show_ready_state(self, custom_text: Optional[str] = None):
         """Ativa e destaca o botão BAIXAR quando a mídia for reconhecida."""
         self.progress_bar.set(0.0)
         self.progress_bar.configure(progress_color=Theme.PRIMARY)
@@ -124,7 +124,16 @@ class DownloadActionSection(ctk.CTkFrame):
         self.btn_cancel.pack_forget()
         self.btn_open_folder.pack_forget()
         self.btn_download.pack(side="right", fill="x", expand=True)
-        self.btn_download.configure(state="normal", text="⚡ BAIXAR AGORA", fg_color=Theme.PRIMARY)
+        btn_text = custom_text or "⚡ BAIXAR AGORA"
+        self.btn_download.configure(state="normal", text=btn_text, fg_color=Theme.PRIMARY)
+
+    def set_download_button_text(self, text: str, enabled: bool = True):
+        """Permite customizar o texto e estado do botão de download (ex: para seleção de playlist)."""
+        self.btn_download.configure(
+            text=text,
+            state="normal" if enabled else "disabled",
+            fg_color=Theme.PRIMARY if enabled else "#374151"
+        )
 
     def set_downloading_state(self):
         """Atualiza a UI para o estado de download ativo."""

@@ -14,6 +14,7 @@ import yt_dlp
 from src.utils.helpers import format_bytes, format_duration, sanitize_filename
 from src.utils.diagnostics import find_ffmpeg
 from src.utils.logger import log_info, log_error, log_warning
+from src.utils.validators import is_playlist_url
 
 @dataclass
 class VideoQualityOption:
@@ -21,6 +22,18 @@ class VideoQualityOption:
     height: Optional[int]
     format_id: str
     filesize_bytes: Optional[int] = None
+
+@dataclass
+class PlaylistItem:
+    index: int  # 1, 2, 3...
+    video_id: str
+    title: str
+    duration: Optional[int]
+    duration_str: str
+    url: str
+    thumbnail_url: Optional[str]
+    uploader: Optional[str] = None
+    is_selected: bool = True
 
 @dataclass
 class MediaMetadata:
@@ -32,12 +45,15 @@ class MediaMetadata:
     thumbnail_url: Optional[str]
     qualities: List[VideoQualityOption] = field(default_factory=list)
     raw_info: Dict = field(default_factory=dict)
-    media_type: str = "video"  # "video", "audio", "image", "gif"
+    media_type: str = "video"  # "video", "audio", "image", "gif", "playlist"
     image_urls: List[str] = field(default_factory=list)
     video_stream_url: Optional[str] = None
     thumbnail_local_path: Optional[str] = None
     estimated_audio_size: Optional[int] = None
     error: Optional[str] = None
+    is_playlist: bool = False
+    playlist_items: List[PlaylistItem] = field(default_factory=list)
+    playlist_count: int = 0
 
 def clear_thumbnail_cache():
     """Remove com segurança arquivos residuais de thumbnails temporárias."""
@@ -262,6 +278,82 @@ def fetch_instagram_media(url: str) -> Optional[MediaMetadata]:
         raw_info={"shortcode": shortcode, "image_url": main_image, "uncropped": bool(uncropped_urls)}
     )
 
+def _process_playlist_info(url: str, info: Dict, start_t: float) -> MediaMetadata:
+    """Processa e estrutura metadados de uma playlist completa do YouTube."""
+    title = info.get("title") or "Playlist do YouTube"
+    uploader = info.get("uploader") or info.get("channel") or info.get("creator") or "YouTube"
+    raw_entries = info.get("entries") or []
+    
+    playlist_items: List[PlaylistItem] = []
+    item_idx = 1
+    total_duration = 0
+    
+    for entry in raw_entries:
+        if not entry:
+            continue
+        v_title = entry.get("title")
+        if not v_title or v_title in ("[Private video]", "[Deleted video]"):
+            continue
+        v_id = entry.get("id") or ""
+        v_url = entry.get("url")
+        if not v_url or not str(v_url).startswith("http"):
+            v_url = f"https://www.youtube.com/watch?v={v_id}" if v_id else ""
+        v_dur = entry.get("duration")
+        if v_dur:
+            total_duration += v_dur
+        v_dur_str = format_duration(v_dur) if v_dur else "--:--"
+        
+        # Thumbnail
+        v_thumb = None
+        thumbs = entry.get("thumbnails") or []
+        if thumbs:
+            v_thumb = thumbs[-1].get("url")
+        if not v_thumb and v_id:
+            v_thumb = f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg"
+
+        playlist_items.append(PlaylistItem(
+            index=item_idx,
+            video_id=v_id,
+            title=v_title,
+            duration=v_dur,
+            duration_str=v_dur_str,
+            url=v_url,
+            thumbnail_url=v_thumb,
+            uploader=entry.get("uploader") or uploader,
+            is_selected=True
+        ))
+        item_idx += 1
+
+    p_thumb = info.get("thumbnail")
+    if not p_thumb and playlist_items:
+        p_thumb = playlist_items[0].thumbnail_url
+
+    qualities = [
+        VideoQualityOption(label="🌟 Máxima Resolução (HD)", height=None, format_id="bestvideo+bestaudio/best"),
+        VideoQualityOption(label="1080p (FHD)", height=1080, format_id="bestvideo[height<=1080]+bestaudio/best[height<=1080]"),
+        VideoQualityOption(label="720p (HD)", height=720, format_id="bestvideo[height<=720]+bestaudio/best[height<=720]"),
+        VideoQualityOption(label="480p", height=480, format_id="bestvideo[height<=480]+bestaudio/best[height<=480]"),
+        VideoQualityOption(label="360p", height=360, format_id="bestvideo[height<=360]+bestaudio/best[height<=360]"),
+    ]
+
+    elapsed = time.time() - start_t
+    log_info(f"Playlist extraida em {elapsed:.2f}s: {title} ({len(playlist_items)} itens)")
+
+    return MediaMetadata(
+        url=url,
+        title=title,
+        uploader=uploader,
+        duration=total_duration,
+        duration_str=f"{len(playlist_items)} vídeos",
+        thumbnail_url=p_thumb,
+        qualities=qualities,
+        media_type="playlist",
+        is_playlist=True,
+        playlist_items=playlist_items,
+        playlist_count=len(playlist_items),
+        raw_info=info
+    )
+
 def extract_media_info(url: str) -> MediaMetadata:
     """Extrai metadados completos de forma otimizada para máxima velocidade."""
     start_t = time.time()
@@ -413,13 +505,14 @@ def extract_media_info(url: str) -> MediaMetadata:
             log_info(f"Instagram extraido com sucesso em {elapsed:.2f}s: {insta_meta.title}")
             return insta_meta
 
-    # 3. Extração via yt-dlp para YouTube e fallback geral
+    # 3. Extração via yt-dlp para YouTube (incluindo Playlists) e fallback geral
+    is_playlist = is_playlist_url(url)
     ydl_opts = {
-        'extract_flat': False,
+        'extract_flat': 'in_playlist' if is_playlist else False,
         'skip_download': True,
         'quiet': True,
         'no_warnings': True,
-        'ignoreerrors': False,
+        'ignoreerrors': True if is_playlist else False,
     }
 
     try:
@@ -435,6 +528,10 @@ def extract_media_info(url: str) -> MediaMetadata:
                     thumbnail_url=None,
                     error="Não foi possível obter dados para este link."
                 )
+
+            # Caso detecte que o retorno é uma playlist de múltiplos vídeos
+            if info.get("_type") == "playlist" or ("entries" in info and len(list(info.get("entries") or [])) > 0):
+                return _process_playlist_info(url, info, start_t)
 
             title = info.get("title") or "Sem título"
             uploader = info.get("uploader") or info.get("channel") or info.get("creator") or "Autor Desconhecido"

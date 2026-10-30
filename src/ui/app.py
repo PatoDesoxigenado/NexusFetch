@@ -164,6 +164,7 @@ class NexusFetchApp(ctk.CTk):
         self.preview_card = MediaPreviewCard(
             self.scroll_area,
             on_status_message=self._show_temp_status,
+            on_selection_changed=self._on_playlist_selection_changed,
             app_instance=self
         )
 
@@ -253,7 +254,23 @@ class NexusFetchApp(ctk.CTk):
         # Atualiza prévia e opções
         self.preview_card.display_metadata(metadata)
         self.format_bar.configure_for_media(metadata)
-        self.action_section.show_ready_state()
+
+        if metadata.is_playlist:
+            sel_count = sum(1 for it in metadata.playlist_items if it.is_selected)
+            btn_text = f"⚡ BAIXAR {sel_count} VÍDEO{'S' if sel_count != 1 else ''}"
+            self.action_section.show_ready_state(custom_text=btn_text)
+            if sel_count == 0:
+                self.action_section.set_download_button_text("Nenhum vídeo selecionado", enabled=False)
+        else:
+            self.action_section.show_ready_state()
+
+    def _on_playlist_selection_changed(self, selected_count: int, total_count: int):
+        """Callback acionado sempre que um item da playlist for marcado ou desmarcado."""
+        if selected_count > 0:
+            btn_text = f"⚡ BAIXAR {selected_count} VÍDEO{'S' if selected_count != 1 else ''}"
+            self.action_section.set_download_button_text(btn_text, enabled=True)
+        else:
+            self.action_section.set_download_button_text("Nenhum vídeo selecionado", enabled=False)
 
     def _on_format_options_changed(self):
         pass
@@ -284,6 +301,7 @@ class NexusFetchApp(ctk.CTk):
             media_type=self.current_metadata.media_type,
             image_urls=self.current_metadata.image_urls,
             title=self.current_metadata.title,
+            playlist_items=self.current_metadata.playlist_items if self.current_metadata.is_playlist else None,
             on_progress=on_prog,
             on_status=on_stat,
             on_complete=on_done

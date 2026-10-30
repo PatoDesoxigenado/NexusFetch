@@ -28,6 +28,7 @@ class MediaDownloader:
         media_type: str = "video",
         image_urls: Optional[list] = None,
         title: str = "download",
+        playlist_items: Optional[list] = None,
         on_progress: Optional[Callable[[float, str, str, str], None]] = None,
         on_status: Optional[Callable[[str], None]] = None,
         on_complete: Optional[Callable[[bool, str, str], None]] = None,
@@ -36,7 +37,7 @@ class MediaDownloader:
         self._is_cancelled = False
         self._current_thread = threading.Thread(
             target=self._run_download,
-            args=(url, output_dir, mode, format_id, media_type, image_urls, title, on_progress, on_status, on_complete),
+            args=(url, output_dir, mode, format_id, media_type, image_urls, title, playlist_items, on_progress, on_status, on_complete),
             daemon=True
         )
         self._current_thread.start()
@@ -50,6 +51,7 @@ class MediaDownloader:
         media_type: str,
         image_urls: Optional[list],
         title: str,
+        playlist_items: Optional[list],
         on_progress: Optional[Callable[[float, str, str, str], None]],
         on_status: Optional[Callable[[str], None]],
         on_complete: Optional[Callable[[bool, str, str], None]],
@@ -60,6 +62,103 @@ class MediaDownloader:
         # Localiza FFmpeg se disponível
         ffmpeg_ok, ffmpeg_path, _ = find_ffmpeg()
         ffmpeg_location = os.path.dirname(ffmpeg_path) if (ffmpeg_ok and ffmpeg_path) else None
+
+        # -------------------------------------------------------------
+        # CASO 0: Download de PLAYLIST DO YOUTUBE
+        # -------------------------------------------------------------
+        if media_type == "playlist" or (playlist_items and len(playlist_items) > 0):
+            selected_items = [it for it in (playlist_items or []) if getattr(it, "is_selected", True)]
+            if not selected_items:
+                if on_complete:
+                    on_complete(False, "Nenhum vídeo foi selecionado na playlist.", "")
+                return
+
+            total_sel = len(selected_items)
+            playlist_dir = os.path.join(output_dir, safe_title)
+            os.makedirs(playlist_dir, exist_ok=True)
+
+            success_count = 0
+            for idx, item in enumerate(selected_items, 1):
+                if self._is_cancelled:
+                    if on_complete:
+                        on_complete(False, f"Download cancelado pelo usuário ({success_count}/{total_sel} baixados).", playlist_dir)
+                    return
+
+                if on_status:
+                    on_status(f"[{idx}/{total_sel}] Baixando: {item.title[:45]}...")
+
+                def make_progress_hook(item_idx, total_items):
+                    def hook(d):
+                        if self._is_cancelled:
+                            raise Exception("Download cancelado pelo usuário.")
+                        if d.get("status") == "downloading":
+                            tot = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                            dl = d.get("downloaded_bytes") or 0
+                            video_pct = (dl / tot * 100.0) if tot > 0 else 0.0
+                            overall_pct = ((item_idx - 1) / total_items * 100.0) + (video_pct / total_items)
+
+                            speed = d.get("speed")
+                            speed_str = f"{format_bytes(speed)}/s" if speed else "-- KB/s"
+                            eta = d.get("eta")
+                            eta_str = f"ETA: {format_duration(eta)}" if eta is not None else "ETA: --:--"
+                            fname = os.path.basename(d.get("filename", ""))
+                            if on_progress:
+                                on_progress(overall_pct, speed_str, eta_str, f"[{item_idx}/{total_items}] {fname}")
+                    return hook
+
+                item_outtmpl = os.path.join(playlist_dir, f"{item.index:02d} - %(title)s.%(ext)s")
+
+                ydl_opts_item = {
+                    "outtmpl": item_outtmpl,
+                    "progress_hooks": [make_progress_hook(idx, total_sel)],
+                    "quiet": True,
+                    "no_warnings": True,
+                    "nocheckcertificate": True,
+                    "windowsfilenames": True,
+                }
+                if ffmpeg_location:
+                    ydl_opts_item["ffmpeg_location"] = ffmpeg_location
+
+                if mode == "audio":
+                    ydl_opts_item.update({
+                        "format": "bestaudio/best",
+                        "postprocessors": [
+                            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "320"},
+                            {"key": "FFmpegMetadata", "add_metadata": True}
+                        ] if ffmpeg_ok else [],
+                    })
+                else:
+                    sel_fmt = format_id or "bestvideo+bestaudio/best"
+                    ydl_opts_item.update({
+                        "format": sel_fmt,
+                        "merge_output_format": "mp4",
+                        "postprocessors": [
+                            {"key": "FFmpegVideoRemuxer", "preferedformat": "mp4"}
+                        ] if ffmpeg_ok else [],
+                    })
+
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts_item) as ydl:
+                        ydl.download([item.url])
+                    success_count += 1
+                except Exception as ex:
+                    if "cancelado pelo usuário" in str(ex):
+                        if on_complete:
+                            on_complete(False, f"Download cancelado ({success_count}/{total_sel} baixados).", playlist_dir)
+                        return
+                    # Registra erro no log mas continua com os outros vídeos
+                    try:
+                        from src.utils.logger import log_error
+                        log_error(f"Erro ao baixar vídeo da playlist ({item.url}): {ex}")
+                    except Exception:
+                        pass
+
+            if on_complete:
+                if self._is_cancelled:
+                    on_complete(False, f"Download cancelado ({success_count}/{total_sel} baixados).", playlist_dir)
+                else:
+                    on_complete(True, f"Playlist concluída! {success_count} de {total_sel} vídeos salvos com sucesso.", playlist_dir)
+            return
 
         # -------------------------------------------------------------
         # CASO 1: Download de IMAGEM (Fotos Twitter / X e Instagram)

@@ -22,14 +22,21 @@ Um aplicativo desktop moderno, rápido e sem complicações para baixar mídias 
   - **Fotos e Posts:** Extração inteligente e download de imagens em resolução máxima original (`.jpg`), com contorno transparente de restrições de login/TLS.
   - **Reels e Vídeos:** Download direto em formato `.mp4` de alta qualidade.
   - **Metadados Completos:** Título, autor e capa carregados instantaneamente.
-- **Módulo YouTube:**
+- **Módulo YouTube & Playlists:**
   - Download de Vídeo (MP4) com seleção de resoluções dinâmicas (720p, 1080p, 1440p até 4K UHD).
   - Download de Áudio puro (MP3) com conversão automática na qualidade máxima de 320 kbps e metadados ID3.
+  - **Suporte Completo a Playlists:**
+    - Extração ultra-rápida de todos os vídeos da playlist em lote.
+    - **Lista Interativa Paginada:** Exibe até 30 vídeos por seção com controles de página (`◀ Anterior` e `Próxima ▶`).
+    - **Controle Individual de Seleção:** Checkboxes por vídeo para escolher exatamente quais vídeos baixar, evitando downloads indesejados.
+    - **Ações Rápidas:** Botões para `Marcar Todos` e `Desmarcar Todos` com persistência de estado entre páginas.
+    - Organização automática dos downloads na pasta com o nome da playlist (`01 - Nome.mp4`, `02 - Nome.mp4`, etc.).
   - Download de Thumbnail em alta resolução com um clique.
 - **Prévia de Tamanho Estimado de Arquivo:**
   - O menu de seleção de qualidade exibe o tamanho aproximado de cada arquivo antes de iniciar o download (ex: `1080p (FHD) ~ 136.1 MB`, `MP3 320 kbps ~ 8.7 MB`, `Imagem ~ 201.5 KB`).
-- **Auto-Diagnóstico de Inicialização:**
-  - Ao abrir o app (inclusive no executável), uma rotina instantânea verifica a presença do `FFmpeg`, conexão com a internet e permissões de escrita, alertando o usuário de forma amigável caso algo falte.
+- **Auto-Diagnóstico de Inicialização & Instalação Automática do FFmpeg (1-Clique):**
+  - Ao abrir o app (inclusive no executável), uma rotina instantânea verifica a presença do `FFmpeg`, conexão com a internet e permissões de escrita.
+  - **Instalador Automático do FFmpeg:** Caso o computador não tenha o FFmpeg, o app oferece um botão de instalação automática direta que baixa, extrai e configura os binários do FFmpeg sem que o usuário precise abrir o navegador ou configurar variáveis de ambiente.
 
 ---
 

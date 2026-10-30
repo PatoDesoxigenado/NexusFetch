@@ -22,11 +22,13 @@ class ValidationResult:
 # Padrões Regex
 PATTERNS = {
     MODULE_YOUTUBE: [
-        r'(?:https?:\/\/)?(?:www\.|m\.|music\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}',
+        r'(?:https?:\/\/)?(?:www\.|m\.|music\.)?youtube\.com\/watch\?(?:[^&\s]+&)*v=[a-zA-Z0-9_-]{11}',
         r'(?:https?:\/\/)?youtu\.be\/[a-zA-Z0-9_-]{11}',
         r'(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\/[a-zA-Z0-9_-]{11}',
         r'(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/live\/[a-zA-Z0-9_-]+',
         r'(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/embed\/[a-zA-Z0-9_-]{11}',
+        r'(?:https?:\/\/)?(?:www\.|m\.|music\.)?youtube\.com\/playlist\?list=[a-zA-Z0-9_-]+',
+        r'(?:https?:\/\/)?(?:www\.|m\.|music\.)?youtube\.com\/watch\?(?:[^&\s]+&)*list=[a-zA-Z0-9_-]+',
     ],
     MODULE_INSTAGRAM: [
         r'(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[a-zA-Z0-9_-]+',
@@ -45,6 +47,13 @@ def clean_url(raw_url: str) -> str:
     if url and not url.startswith(("http://", "https://")):
         url = "https://" + url
     return url
+
+def is_playlist_url(raw_url: str) -> bool:
+    """Verifica se a URL informada é uma playlist do YouTube."""
+    if not raw_url:
+        return False
+    url = clean_url(raw_url)
+    return bool(re.search(r'youtube\.com\/playlist\?list=[a-zA-Z0-9_-]+|youtube\.com\/watch\?(?:[^&\s]+&)*list=[a-zA-Z0-9_-]+', url, re.IGNORECASE))
 
 def detect_platform(url: str) -> Optional[str]:
     """Identifica a qual plataforma a URL pertence através de regex."""

@@ -48,4 +48,68 @@ def test_extract_instagram_photo():
     assert "kel" in meta.uploader
     assert len(meta.qualities) > 0
 
+def test_playlist_metadata_structure():
+    from src.core.metadata import PlaylistItem
+    item1 = PlaylistItem(
+        index=1,
+        video_id="abc1",
+        title="Aula 1 - Intro",
+        duration=120,
+        duration_str="02:00",
+        url="https://www.youtube.com/watch?v=abc1",
+        thumbnail_url="https://i.ytimg.com/vi/abc1/hqdefault.jpg",
+        is_selected=True
+    )
+    item2 = PlaylistItem(
+        index=2,
+        video_id="abc2",
+        title="Aula 2 - Prática",
+        duration=240,
+        duration_str="04:00",
+        url="https://www.youtube.com/watch?v=abc2",
+        thumbnail_url="https://i.ytimg.com/vi/abc2/hqdefault.jpg",
+        is_selected=False
+    )
+    pl_meta = MediaMetadata(
+        url="https://www.youtube.com/playlist?list=PLtest",
+        title="Curso Completo",
+        uploader="Professor X",
+        duration=360,
+        duration_str="2 vídeos",
+        thumbnail_url="https://i.ytimg.com/vi/abc1/hqdefault.jpg",
+        media_type="playlist",
+        is_playlist=True,
+        playlist_items=[item1, item2],
+        playlist_count=2
+    )
+
+    assert pl_meta.is_playlist is True
+    assert pl_meta.media_type == "playlist"
+    assert pl_meta.playlist_count == 2
+    selected = [it for it in pl_meta.playlist_items if it.is_selected]
+    assert len(selected) == 1
+    assert selected[0].title == "Aula 1 - Intro"
+
+def test_downloader_playlist_empty_selection(tmp_path):
+    downloader = MediaDownloader()
+    completed = []
+    
+    downloader._run_download(
+        url="https://www.youtube.com/playlist?list=PLtest",
+        output_dir=str(tmp_path),
+        mode="video",
+        format_id="best",
+        media_type="playlist",
+        image_urls=None,
+        title="Playlist Teste",
+        playlist_items=[],  # Nenhum item selecionado
+        on_progress=None,
+        on_status=None,
+        on_complete=lambda ok, msg, path: completed.append((ok, msg))
+    )
+
+    assert len(completed) == 1
+    assert completed[0][0] is False
+    assert "Nenhum vídeo" in completed[0][1]
+
 
