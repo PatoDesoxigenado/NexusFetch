@@ -60,6 +60,7 @@ class NexusFetchApp(ctk.CTk):
 
         # Executa a rotina de diagnóstico de inicialização
         self.after(200, self._perform_startup_check)
+        self.after(500, self._start_background_update_checks)
 
     def run_on_ui(self, func, *args):
         """Agrega chamadas à fila thread-safe para execução na thread principal do Tkinter."""
@@ -189,6 +190,74 @@ class NexusFetchApp(ctk.CTk):
         self.diag_result = run_startup_diagnostics()
         if not self.diag_result.ffmpeg_available or not self.diag_result.write_permission:
             DiagnosticModal(self, self.diag_result)
+
+    def _start_background_update_checks(self):
+        """Inicia verificação em segundo plano do motor yt-dlp e de novas versões do aplicativo."""
+        # 1. Thread de atualização do motor yt-dlp
+        def ytdlp_worker():
+            try:
+                from src.utils.updater import check_and_update_ytdlp
+                def on_status(msg):
+                    self.run_on_ui(self.url_bar.set_system_busy, True, msg)
+
+                updated, message = check_and_update_ytdlp(on_status=on_status)
+                if updated:
+                    def notify_done():
+                        self.url_bar.set_system_busy(False)
+                        self.url_bar.show_info(message)
+                        self.after(4500, self.url_bar.clear_feedback)
+                    self.run_on_ui(notify_done)
+                else:
+                    self.run_on_ui(self.url_bar.set_system_busy, False)
+            except Exception as e:
+                log_error(f"Erro ao verificar atualização do yt-dlp: {e}")
+                self.run_on_ui(self.url_bar.set_system_busy, False)
+
+        threading.Thread(target=ytdlp_worker, daemon=True).start()
+
+        # 2. Thread de atualização do aplicativo (dist)
+        def app_worker():
+            try:
+                from src.utils.updater import check_app_update, download_app_update, is_update_ready, apply_app_update_and_restart
+
+                if is_update_ready():
+                    def notify_ready():
+                        self.navbar.show_update_button(
+                            text="⚡ Reiniciar e Atualizar",
+                            command=apply_app_update_and_restart,
+                            fg_color="#059669"
+                        )
+                    self.run_on_ui(notify_ready)
+                    return
+
+                update_info = check_app_update()
+                if update_info:
+                    log_info(f"Nova versão do NexusFetch detectada: {update_info['sha'][:7]}")
+
+                    def notify_downloading():
+                        self.navbar.show_update_button(
+                            text="⚡ Baixando Nova Versão...",
+                            fg_color="#D97706",
+                            state="disabled"
+                        )
+                    self.run_on_ui(notify_downloading)
+
+                    success = download_app_update(update_info)
+                    if success:
+                        def notify_ready_to_restart():
+                            self.navbar.show_update_button(
+                                text="⚡ Reiniciar e Atualizar",
+                                command=apply_app_update_and_restart,
+                                fg_color="#059669"
+                            )
+                        self.run_on_ui(notify_ready_to_restart)
+                    else:
+                        self.run_on_ui(self.navbar.hide_update_button)
+
+            except Exception as e:
+                log_error(f"Erro ao verificar atualização do app: {e}")
+
+        threading.Thread(target=app_worker, daemon=True).start()
 
     def _on_module_changed(self, module_key: str):
         self.active_module = module_key

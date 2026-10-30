@@ -177,6 +177,28 @@ class UrlInputBar(ctk.CTkFrame):
         )
         lbl.pack(anchor="w", padx=4, pady=(2, 0))
 
+    def show_info(self, message: str):
+        self.clear_feedback()
+        self.feedback_container.pack(fill="x", pady=(4, 0))
+        lbl = ctk.CTkLabel(
+            self.feedback_container,
+            text=f"ℹ️ {message}",
+            font=Theme.FONT_SMALL,
+            text_color="#60A5FA"
+        )
+        lbl.pack(anchor="w", padx=4, pady=(2, 0))
+
+    def set_system_busy(self, is_busy: bool, message: Optional[str] = None):
+        if is_busy:
+            self.btn_analyze.configure(text="⏳ Atualizando...", state="disabled", fg_color=Theme.SECONDARY)
+            self.btn_paste.configure(state="disabled")
+            if message:
+                self.show_info(message)
+        else:
+            self.btn_analyze.configure(text="🔍 Analisar", state="normal", fg_color=Theme.PRIMARY)
+            self.btn_paste.configure(state="normal")
+            self.clear_feedback()
+
     def clear_feedback(self):
         for widget in self.feedback_container.winfo_children():
             widget.destroy()

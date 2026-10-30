@@ -1,5 +1,6 @@
-"""Barra superior de navegação entre plataformas."""
-from typing import Callable, Dict
+"""Barra superior de navegação entre plataformas com atalho do GitHub e alerta de atualização."""
+import webbrowser
+from typing import Callable, Dict, Optional
 import customtkinter as ctk
 from src.ui.theme import Theme
 from src.config import MODULES, MODULE_YOUTUBE
@@ -15,7 +16,7 @@ class NavBar(ctk.CTkFrame):
         self._build_ui()
 
     def _build_ui(self):
-        # Logo / Marca à esquerda
+        # Logo / Marca e Botão do GitHub à esquerda
         brand_frame = ctk.CTkFrame(self, fg_color="transparent")
         brand_frame.pack(side="left", padx=20)
 
@@ -35,13 +36,43 @@ class NavBar(ctk.CTkFrame):
         )
         brand_label.pack(side="left")
 
-        # Botões das plataformas à direita
-        nav_buttons_frame = ctk.CTkFrame(self, fg_color="transparent")
-        nav_buttons_frame.pack(side="right", padx=15)
+        # Botão oficial para o repositório do GitHub (Issues / Feedback)
+        self.btn_github = ctk.CTkButton(
+            brand_frame,
+            text="🐙 GitHub",
+            font=Theme.FONT_SMALL,
+            fg_color="transparent",
+            hover_color=Theme.BG_DARK,
+            text_color=Theme.TEXT_MUTED,
+            border_width=1,
+            border_color=Theme.BORDER,
+            height=26,
+            width=84,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            command=lambda: webbrowser.open("https://github.com/PatoDesoxigenado/NexusFetch")
+        )
+        self.btn_github.pack(side="left", padx=(14, 0))
+
+        # Botões de Navegação e Atualização à direita
+        self.nav_buttons_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.nav_buttons_frame.pack(side="right", padx=15)
+
+        # Botão em destaque de atualização do aplicativo (inicialmente oculto)
+        self.btn_update = ctk.CTkButton(
+            self.nav_buttons_frame,
+            text="⚡ Nova Versão",
+            font=Theme.FONT_BODY_BOLD,
+            fg_color="#059669",
+            hover_color="#10B981",
+            text_color="#FFFFFF",
+            height=36,
+            width=175,
+            corner_radius=Theme.CORNER_RADIUS_SM
+        )
 
         for mod_key, mod_info in MODULES.items():
             btn = ctk.CTkButton(
-                nav_buttons_frame,
+                self.nav_buttons_frame,
                 text=f"{mod_info['icon']}  {mod_info['label']}",
                 font=Theme.FONT_BODY_BOLD,
                 width=130,
@@ -53,6 +84,33 @@ class NavBar(ctk.CTkFrame):
             self.buttons[mod_key] = btn
 
         self._update_button_styles()
+
+    def show_update_button(
+        self,
+        text: str,
+        command: Optional[Callable[[], None]] = None,
+        fg_color: str = "#059669",
+        hover_color: str = "#10B981",
+        state: str = "normal"
+    ):
+        """Exibe o botão de atualização em destaque exatamente ao lado do módulo YouTube."""
+        self.btn_update.configure(
+            text=text,
+            fg_color=fg_color,
+            hover_color=hover_color,
+            state=state
+        )
+        if command:
+            self.btn_update.configure(command=command)
+
+        yt_button = self.buttons.get(MODULE_YOUTUBE)
+        if yt_button and not self.btn_update.winfo_ismapped():
+            self.btn_update.pack(side="left", padx=(0, 8), before=yt_button)
+
+    def hide_update_button(self):
+        """Oculta o botão de atualização."""
+        if self.btn_update.winfo_ismapped():
+            self.btn_update.pack_forget()
 
     def _on_btn_click(self, module_key: str):
         if module_key != self.current_module:
