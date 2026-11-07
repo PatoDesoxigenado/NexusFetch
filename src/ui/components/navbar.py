@@ -3,7 +3,7 @@ import webbrowser
 from typing import Callable, Dict, Optional
 import customtkinter as ctk
 from src.ui.theme import Theme
-from src.config import MODULES, MODULE_YOUTUBE
+from src.config import MODULES, MODULE_YOUTUBE, MODULE_CONVERTER
 
 class NavBar(ctk.CTkFrame):
     def __init__(self, parent, on_module_selected: Callable[[str], None]):
@@ -125,15 +125,36 @@ class NavBar(ctk.CTkFrame):
 
     def _update_button_styles(self):
         for mod_key, btn in self.buttons.items():
+            is_converter = (mod_key == MODULE_CONVERTER)
             if mod_key == self.current_module:
-                btn.configure(
-                    fg_color=Theme.PRIMARY,
-                    hover_color=Theme.PRIMARY_HOVER,
-                    text_color=Theme.TEXT_MAIN
-                )
+                if is_converter:
+                    btn.configure(
+                        fg_color=Theme.CONVERTER_PRIMARY,
+                        hover_color=Theme.CONVERTER_HOVER,
+                        text_color=Theme.TEXT_MAIN,
+                        border_width=0
+                    )
+                else:
+                    btn.configure(
+                        fg_color=Theme.PRIMARY,
+                        hover_color=Theme.PRIMARY_HOVER,
+                        text_color=Theme.TEXT_MAIN,
+                        border_width=0
+                    )
             else:
-                btn.configure(
-                    fg_color=Theme.SECONDARY,
-                    hover_color=Theme.SECONDARY_HOVER,
-                    text_color=Theme.TEXT_MUTED
-                )
+                if is_converter:
+                    # Destaque especial inativo para o Conversor (Borda violeta e texto lavanda)
+                    btn.configure(
+                        fg_color="#1E1B2E",
+                        hover_color="#2E2845",
+                        text_color="#C4B5FD",
+                        border_width=1,
+                        border_color=Theme.CONVERTER_BORDER
+                    )
+                else:
+                    btn.configure(
+                        fg_color=Theme.SECONDARY,
+                        hover_color=Theme.SECONDARY_HOVER,
+                        text_color=Theme.TEXT_MUTED,
+                        border_width=0
+                    )

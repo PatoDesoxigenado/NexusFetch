@@ -1,9 +1,10 @@
 # 🔻 Nexus Fetch
 
 > **Baixe vídeos, áudios, imagens e playlists de forma limpa, direta e 100% segura.**  
+> **Converta suas mídias com máxima qualidade e aceleração local nativa via FFmpeg.**  
 > Sem anúncios invasivos, sem pop-ups, sem redirecionamentos suspeitos e sem vírus.
 
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.0.0-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.0-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen.svg)](https://www.python.org/)
 [![Plataformas](https://img.shields.io/badge/plataformas-Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
@@ -26,8 +27,9 @@ O **NexusFetch** é um aplicativo portátil (*standalone*). Você não precisa i
 
 ## 📖 Como Usar (Passo a Passo Rápido)
 
+### 📥 1. Baixar Mídias da Internet (YouTube, Instagram, Twitter/X)
 1. **Abra o programa** dando dois cliques no executável.
-2. **Cole o link** da mídia que você quer baixar (o programa aceita **YouTube**, **Instagram** e **Twitter / X**).
+2. **Cole o link** da mídia que você quer baixar na aba correspondente.
 3. Clique em **Analisar**.
 4. **Escolha o formato e a qualidade desejada:**
    - **Vídeo (MP4):** De 360p até 4K UHD (2160p).
@@ -36,14 +38,24 @@ O **NexusFetch** é um aplicativo portátil (*standalone*). Você não precisa i
    - **Imagens / GIFs:** Baixe fotos originais ou salve GIFs diretamente em formato `.gif`.
 5. Clique em **Baixar**! O arquivo será salvo diretamente na sua pasta de **Downloads**.
 
+### 🔄 2. Converter Mídias Locais (Aba Exclusiva "Conversor")
+1. Clique no botão violeta **🔄 Conversor** na barra superior.
+2. **Arraste e solte** seus arquivos de vídeo ou áudio na área central (ou clique para selecionar múltiplos arquivos pelo Explorador).
+3. **Configure a saída:**
+   - **MP4 ➔ MP4:** Altere a resolução (até 4K) e selecione o CODEC desejado (**H.264**, **H.265/HEVC**, **AV1** ou **VP9**).
+   - **Formatos de Vídeo (MKV, AVI, MOV, WEBM):** Converta entre qualquer um deles para MP4 ou vice-versa com redimensionamento.
+   - **Extrair Áudio:** Converta qualquer vídeo para MP3 com taxa de bits máxima (320 kbps).
+   - **Conversor de Áudio:** Converta entre MP3, WAV, FLAC, M4A, OGG e OPUS sem perdas.
+4. Clique em **⚡ Converter Arquivos**! A conversão ocorre em lote, de forma segura, com gravação atômica temporária para garantir zero arquivos corrompidos.
+
 > 🛠️ **E o FFmpeg?**  
-> Para juntar áudio e vídeo em alta resolução ou converter para MP3, o programa precisa do FFmpeg. Ao abrir o NexusFetch, ele verifica isso automaticamente. Se você não tiver o FFmpeg instalado, **o próprio programa exibe um botão de 1 clique que baixa e configura tudo sozinho**, sem você precisar abrir navegador nem mexer em configurações do sistema!
+> O programa verifica automaticamente se o FFmpeg está instalado. Se não estiver, **ele oferece um botão de 1 clique que baixa e configura tudo sozinho**, sem você precisar abrir navegador nem mexer em configurações do sistema!
 
 ---
 
 ## 🛡️ Por que o NexusFetch é Seguro e Confiável?
 
-A grande maioria dos sites e programas online para baixar vídeos está repleta de:
+A grande maioria dos sites e programas online para baixar e converter vídeos está repleta de:
 - Anúncios enganosos e botões falsos de download;
 - Rastreadores e mineradores em segundo plano;
 - Riscos de adwares, malwares e vírus.
@@ -58,13 +70,20 @@ O **NexusFetch** nasceu para ser uma **alternativa definitiva, transparente e é
 - **[CustomTkinter](https://github.com/TomSchimansky/CustomTkinter):** Interface gráfica nativa moderna em Dark Mode, fluida, responsiva e sem sobrecarregar a memória.
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp):** A biblioteca open source mais respeitada e mantida do mundo para extração segura de mídias do YouTube.
 - **[curl_cffi](https://github.com/yifeikong/curl_cffi):** Motor de requisições de rede que garante conexões seguras e contorna bloqueios de CDN do Instagram/Meta.
-- **[FFmpeg](https://ffmpeg.org/):** Padrão da indústria para multiplexação e conversão de mídia em tempo real.
+- **[FFmpeg](https://ffmpeg.org/):** Padrão da indústria para multiplexação e conversão de mídia em tempo real com escrita atômica segura.
 - **Auto-Updater Inteligente:** O aplicativo possui verificação automática de novas versões do motor yt-dlp e do próprio executável diretamente pelo repositório oficial do GitHub.
 
 ---
 
 ## ✨ Principais Recursos
 
+- **Conversor de Mídia Integrado (v1.1):**
+  - Conversão em lote com suporte a arrastar e soltar (*drag & drop*) ou seleção múltipla via Explorer.
+  - Conversão MP4 ➔ MP4 com seleção exclusiva de codecs modernos (H.264, H.265/HEVC, AV1, VP9) e resoluções de 480p até 4K UHD.
+  - Conversão bidirecional entre formatos populares: MP4, MKV, AVI, MOV e WEBM.
+  - Extração de áudio em altíssima fidelidade (MP3 320 kbps).
+  - Conversor de áudio entre MP3, WAV (lossless), FLAC (lossless), M4A, OGG e OPUS.
+  - Gravação atômica temporária (`.tmp`) que protege seus arquivos contra corrupção mesmo se o processo for interrompido.
 - **YouTube & Playlists:**
   - Suporte de 360p a 4K UHD (2160p) com estimativa de tamanho do arquivo em tempo real.
   - Conversão para MP3 em 320 kbps com tags ID3.
@@ -130,15 +149,17 @@ NexusFetch/
 │   ├── NexusFetch              # Executável portátil para Linux (x86_64)
 │   └── README.md               # Guia rápido de uso dos executáveis
 ├── src/                        # Código-fonte principal da aplicação
-│   ├── config.py               # Configurações globais e diretórios
-│   ├── core/                   # Núcleo de extração e download
+│   ├── config.py               # Configurações globais e módulos
+│   ├── core/                   # Núcleo de extração, download e conversão
+│   │   ├── converter.py        # Motor de conversão em lote e codecs FFmpeg
 │   │   ├── downloader.py       # Gerenciador de downloads e telemetria
 │   │   └── metadata.py         # Extrator de metadados (YT, Insta, Twitter)
 │   ├── ui/                     # Interface gráfica do usuário (CustomTkinter)
-│   │   ├── app.py              # Janela principal e orquestração de eventos
-│   │   ├── theme.py            # Cores, fontes e constantes visuais
+│   │   ├── app.py              # Janela principal e alternância de módulos
+│   │   ├── theme.py            # Cores, fontes e paleta visual
 │   │   └── components/         # Componentes modulares de UI
-│   │       ├── navbar.py       # Cabeçalho com abas, botão GitHub e updater
+│   │       ├── converter_view.py # Aba exclusiva do conversor de mídia
+│   │       ├── navbar.py       # Cabeçalho com abas, botão conversor e GitHub
 │   │       ├── url_input.py    # Barra de entrada de link e status
 │   │       ├── preview.py      # Cartão de prévia e listagem de playlists
 │   │       ├── format_bar.py   # Seletor de qualidade e botões de ação
@@ -151,6 +172,7 @@ NexusFetch/
 │       ├── updater.py          # Auto-update do yt-dlp e do NexusFetch
 │       └── validators.py       # Validação e detecção regex de links
 ├── tests/                      # Suíte de testes unitários automatizados
+│   ├── test_converter.py       # Testes do conversor de mídia e codecs
 │   ├── test_diagnostics.py     # Testes de diagnóstico de sistema
 │   ├── test_downloader.py      # Testes de download e estimativas
 │   ├── test_updater.py         # Testes dos mecanismos de auto-update

@@ -23,3 +23,7 @@ Thumbs.db
 # Runtime logs
 logs/
 *.log
+
+# Test samples
+tests/testes_videos_audios/
+testes_videos_audios/

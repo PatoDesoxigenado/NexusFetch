@@ -14,6 +14,7 @@ from src.config import (
     WINDOW_MIN_WIDTH,
     WINDOW_MIN_HEIGHT,
     MODULE_YOUTUBE,
+    MODULE_CONVERTER,
     ICON_ICO_PATH,
     ICON_PNG_PATH,
 )
@@ -24,6 +25,7 @@ from src.ui.components.preview import MediaPreviewCard
 from src.ui.components.format_bar import FormatSelectionBar
 from src.ui.components.progress import DownloadActionSection
 from src.ui.components.diag_modal import DiagnosticModal
+from src.ui.components.converter_view import ConverterView
 
 from src.utils.diagnostics import run_startup_diagnostics, DiagnosticResult
 from src.core.metadata import extract_media_info, MediaMetadata, clear_thumbnail_cache
@@ -175,6 +177,12 @@ class NexusFetchApp(ctk.CTk):
             on_options_changed=self._on_format_options_changed
         )
 
+        # 3.5 Visão do Conversor de Mídia (Inicialmente oculta)
+        self.converter_view = ConverterView(
+            self.scroll_area,
+            app_instance=self
+        )
+
     def _add_badge(self, parent, text: str):
         badge = ctk.CTkFrame(parent, fg_color=Theme.BG_DARK, corner_radius=Theme.CORNER_RADIUS_SM)
         badge.pack(side="left", padx=(0, 8), pady=2)
@@ -261,7 +269,27 @@ class NexusFetchApp(ctk.CTk):
 
     def _on_module_changed(self, module_key: str):
         self.active_module = module_key
-        self.url_bar.set_current_module(module_key)
+        if module_key == MODULE_CONVERTER:
+            # Oculta interface do Downloader
+            self.url_bar.pack_forget()
+            self.welcome_card.pack_forget()
+            self.preview_card.pack_forget()
+            self.format_bar.pack_forget()
+            self.action_section.pack_forget()
+            # Exibe o Conversor em tela cheia na área de conteúdo
+            self.converter_view.pack(fill="both", expand=True)
+        else:
+            # Oculta o Conversor
+            self.converter_view.pack_forget()
+            # Restaura interface do Downloader
+            self.action_section.pack(side="bottom", fill="x", pady=(12, 0))
+            self.url_bar.pack(fill="x", pady=(0, 10))
+            self.url_bar.set_current_module(module_key)
+            if self.current_metadata and not self.current_metadata.error:
+                self.preview_card.pack(fill="x", pady=(0, 10))
+                self.format_bar.pack(fill="x", pady=(0, 10))
+            else:
+                self.welcome_card.pack(fill="x", pady=(0, 10))
 
     def _on_cross_redirect(self, target_module: str, url: str):
         """Muda para a aba correta e dispara a análise automaticamente."""

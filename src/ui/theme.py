@@ -20,6 +20,14 @@ class Theme:
     SECONDARY = "#22242A"
     SECONDARY_HOVER = "#31343C"
     
+    # Cores Exclusivas do Conversor de Mídia (Destaque Visual)
+    CONVERTER_PRIMARY = "#8B5CF6"         # Violeta vibrante
+    CONVERTER_HOVER = "#7C3AED"           # Roxo escuro no hover
+    CONVERTER_ACTIVE = "#6D28D9"          # Roxo ativo/clicado
+    CONVERTER_BORDER = "#8B5CF6"          # Borda com brilho violeta
+    CONVERTER_BG_LIGHT = "#1A1728"        # Fundo suave para cards do conversor
+
+    
     # Status e Ações
     SUCCESS = "#10B981"           # Verde conclusão
     SUCCESS_HOVER = "#059669"

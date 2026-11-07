@@ -45,6 +45,7 @@ def build():
         "--collect-all=yt_dlp",
         "--collect-all=customtkinter",
         "--collect-all=curl_cffi",
+        "--collect-all=windnd",
         "--hidden-import=_cffi_backend",
         "--hidden-import=PIL",
         "--hidden-import=PIL.Image",
