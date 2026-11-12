@@ -42,7 +42,7 @@ class FormatSelectionBar(ctk.CTkFrame):
             self.format_group,
             text="FORMATO:",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_format.pack(anchor="w", pady=(0, 4))
 
@@ -50,11 +50,12 @@ class FormatSelectionBar(ctk.CTkFrame):
             self.format_group,
             values=["🎬 Vídeo (MP4)", "🎵 Áudio (MP3)"],
             font=Theme.FONT_BODY_BOLD,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             selected_color=Theme.PRIMARY,
             selected_hover_color=Theme.PRIMARY_HOVER,
-            unselected_color=Theme.BG_DARK,
+            unselected_color=Theme.BG_INPUT,
             unselected_hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MAIN,
             corner_radius=Theme.CORNER_RADIUS_SM,
             height=34,
             command=self._on_format_changed
@@ -70,7 +71,7 @@ class FormatSelectionBar(ctk.CTkFrame):
             self.quality_group,
             text="QUALIDADE & TAMANHO ESTIMADO:",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_quality.pack(anchor="w", pady=(0, 4))
 
@@ -78,12 +79,13 @@ class FormatSelectionBar(ctk.CTkFrame):
             self.quality_group,
             values=["🌟 Máxima Resolução (Padrão)"],
             font=Theme.FONT_BODY,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             button_color=Theme.SECONDARY,
             button_hover_color=Theme.SECONDARY_HOVER,
             dropdown_fg_color=Theme.BG_CARD_LIGHT,
             dropdown_hover_color=Theme.PRIMARY,
             dropdown_text_color=Theme.TEXT_MAIN,
+            text_color=Theme.TEXT_MAIN,
             corner_radius=Theme.CORNER_RADIUS_SM,
             height=34,
             command=lambda val: self._notify_change()
@@ -98,14 +100,14 @@ class FormatSelectionBar(ctk.CTkFrame):
             dir_row,
             text="SALVAR EM:",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         lbl_dir_title.pack(side="left", padx=(0, 10))
 
         self.lbl_path = ctk.CTkLabel(
             dir_row,
             text=self.download_dir,
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_SMALL_BOLD,
             text_color=Theme.TEXT_MAIN,
             anchor="w"
         )
@@ -114,11 +116,14 @@ class FormatSelectionBar(ctk.CTkFrame):
         btn_browse = ctk.CTkButton(
             dir_row,
             text="📁 Alterar Pasta",
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_SMALL_BOLD,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            width=110,
-            height=26,
+            text_color=Theme.TEXT_NORMAL,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            width=115,
+            height=28,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_choose_folder
         )

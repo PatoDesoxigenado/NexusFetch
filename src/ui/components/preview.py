@@ -61,10 +61,12 @@ class MediaPreviewCard(ctk.CTkFrame):
         # 1.1 Coluna Esquerda: Thumbnail
         self.thumb_container = ctk.CTkFrame(
             self.single_view,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             width=230,
             height=130,
-            corner_radius=Theme.CORNER_RADIUS_SM
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE
         )
         self.thumb_container.pack_propagate(False)
         self.thumb_container.pack(side="left", padx=(0, 16))
@@ -98,16 +100,16 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.lbl_uploader = ctk.CTkLabel(
             meta_row,
             text="👤 --",
-            font=Theme.FONT_BODY,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_BODY_BOLD,
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_uploader.pack(side="left", padx=(0, 15))
 
         self.lbl_duration = ctk.CTkLabel(
             meta_row,
             text="⏱️ --:--",
-            font=Theme.FONT_BODY,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_BODY_BOLD,
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_duration.pack(side="left")
 
@@ -117,11 +119,14 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.btn_download_thumb = ctk.CTkButton(
             action_row,
             text="📥 Baixar Thumbnail HD",
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_SMALL_BOLD,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            height=28,
-            width=165,
+            text_color=Theme.TEXT_NORMAL,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            height=30,
+            width=175,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_download_thumb_click
         )
@@ -139,10 +144,12 @@ class MediaPreviewCard(ctk.CTkFrame):
         # Miniatura da Playlist
         self.pl_thumb_container = ctk.CTkFrame(
             self.pl_header,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             width=140,
             height=85,
-            corner_radius=Theme.CORNER_RADIUS_SM
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE
         )
         self.pl_thumb_container.pack_propagate(False)
         self.pl_thumb_container.pack(side="left", padx=(0, 14))
@@ -173,8 +180,8 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.lbl_pl_meta = ctk.CTkLabel(
             self.pl_info_box,
             text="👤 Autor • 0 vídeos",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED,
+            font=Theme.FONT_BODY,
+            text_color=Theme.TEXT_NORMAL,
             anchor="w"
         )
         self.lbl_pl_meta.pack(fill="x", pady=(0, 6))
@@ -194,11 +201,14 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.btn_select_all = ctk.CTkButton(
             self.pl_ctrl_row,
             text="☑️ Marcar Todos",
-            font=Theme.FONT_SMALL,
-            fg_color=Theme.BG_DARK,
+            font=Theme.FONT_SMALL_BOLD,
+            fg_color=Theme.BG_CARD_LIGHT,
             hover_color=Theme.SECONDARY_HOVER,
-            height=26,
-            width=110,
+            text_color=Theme.TEXT_NORMAL,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            height=28,
+            width=115,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._select_all_playlist_items
         )
@@ -207,28 +217,38 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.btn_deselect_all = ctk.CTkButton(
             self.pl_ctrl_row,
             text="⬜ Desmarcar Todos",
-            font=Theme.FONT_SMALL,
-            fg_color=Theme.BG_DARK,
+            font=Theme.FONT_SMALL_BOLD,
+            fg_color=Theme.BG_CARD_LIGHT,
             hover_color=Theme.SECONDARY_HOVER,
-            height=26,
-            width=120,
+            text_color=Theme.TEXT_NORMAL,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            height=28,
+            width=125,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._deselect_all_playlist_items
         )
         self.btn_deselect_all.pack(side="left")
 
         # Barra de Navegação de Páginas (Páginas de 30 itens)
-        self.pl_pagination_bar = ctk.CTkFrame(self.playlist_view, fg_color=Theme.BG_DARK, corner_radius=Theme.CORNER_RADIUS_SM)
+        self.pl_pagination_bar = ctk.CTkFrame(
+            self.playlist_view,
+            fg_color=Theme.BG_CARD_LIGHT,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE
+        )
         self.pl_pagination_bar.pack(fill="x", pady=(0, 6), padx=2)
 
         self.btn_prev_page = ctk.CTkButton(
             self.pl_pagination_bar,
             text="◀ Anterior",
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            height=26,
-            width=85,
+            text_color=Theme.TEXT_MAIN,
+            height=28,
+            width=95,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._prev_page
         )
@@ -237,7 +257,7 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.lbl_page_info = ctk.CTkLabel(
             self.pl_pagination_bar,
             text="Página 1 de 1 (Vídeos 1 a 30 de 30)",
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_BODY_BOLD,
             text_color=Theme.TEXT_MAIN
         )
         self.lbl_page_info.pack(side="left", expand=True)
@@ -245,11 +265,12 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.btn_next_page = ctk.CTkButton(
             self.pl_pagination_bar,
             text="Próxima ▶",
-            font=Theme.FONT_SMALL,
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            height=26,
-            width=85,
+            text_color=Theme.TEXT_MAIN,
+            height=28,
+            width=95,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._next_page
         )
@@ -368,15 +389,21 @@ class MediaPreviewCard(ctk.CTkFrame):
 
         # Renderiza os itens da página atual
         for item in page_items:
-            row = ctk.CTkFrame(self.pl_scroll_area, fg_color="#18181B", corner_radius=Theme.CORNER_RADIUS_SM)
+            row = ctk.CTkFrame(
+                self.pl_scroll_area,
+                fg_color=Theme.BG_CARD_LIGHT,
+                corner_radius=Theme.CORNER_RADIUS_SM,
+                border_width=1,
+                border_color=Theme.BORDER_SUBTLE
+            )
             row.pack(fill="x", pady=2, padx=4)
 
             # Duração no lado direito
             lbl_dur = ctk.CTkLabel(
                 row,
                 text=item.duration_str,
-                font=Theme.FONT_SMALL,
-                text_color=Theme.TEXT_MUTED
+                font=Theme.FONT_SMALL_BOLD,
+                text_color=Theme.TEXT_NORMAL
             )
             lbl_dur.pack(side="right", padx=(8, 12))
 
@@ -388,6 +415,7 @@ class MediaPreviewCard(ctk.CTkFrame):
                 variable=cb_var,
                 font=Theme.FONT_BODY,
                 text_color=Theme.TEXT_MAIN,
+                border_color=Theme.BORDER,
                 checkbox_width=18,
                 checkbox_height=18,
                 corner_radius=4,

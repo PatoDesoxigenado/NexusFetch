@@ -42,30 +42,36 @@ class UrlInputBar(ctk.CTkFrame):
         )
         self.entry_url.pack(side="left", fill="x", expand=True, padx=(15, 8), pady=4)
         self.entry_url.bind("<Return>", lambda event: self._on_confirm_click())
+        self.entry_url.bind("<FocusIn>", lambda event: self.input_row.configure(border_color=Theme.BORDER_FOCUS))
+        self.entry_url.bind("<FocusOut>", lambda event: self.input_row.configure(border_color=Theme.BORDER))
 
-        # Botão Colar
+        # Botão Colar com ícone e texto destacados
         self.btn_paste = ctk.CTkButton(
             self.input_row,
-            text="📋 Colar",
-            width=75,
-            height=34,
+            text="📋  Colar",
+            width=100,
+            height=38,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            font=Theme.FONT_SMALL,
+            text_color=Theme.TEXT_MAIN,
+            font=Theme.FONT_BODY_BOLD,
+            border_width=1,
+            border_color=Theme.BORDER,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_paste_click
         )
-        self.btn_paste.pack(side="left", padx=(0, 6))
+        self.btn_paste.pack(side="left", padx=(0, 8))
 
         # Botão Analisar
         self.btn_analyze = ctk.CTkButton(
             self.input_row,
-            text="🔍 Analisar",
-            width=110,
-            height=34,
+            text="🔍  Analisar",
+            width=120,
+            height=38,
             fg_color=Theme.PRIMARY,
             hover_color=Theme.PRIMARY_HOVER,
-            font=Theme.FONT_BODY_BOLD,
+            text_color="#FFFFFF",
+            font=Theme.FONT_BUTTON,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_confirm_click
         )
@@ -90,7 +96,7 @@ class UrlInputBar(ctk.CTkFrame):
             self.btn_analyze.configure(text="⏳ Buscando...", state="disabled", fg_color=Theme.SECONDARY)
             self.btn_paste.configure(state="disabled")
         else:
-            self.btn_analyze.configure(text="🔍 Analisar", state="normal", fg_color=Theme.PRIMARY)
+            self.btn_analyze.configure(text="🔍  Analisar", state="normal", fg_color=Theme.PRIMARY)
             self.btn_paste.configure(state="normal")
 
     def _on_paste_click(self):
@@ -130,21 +136,21 @@ class UrlInputBar(ctk.CTkFrame):
 
         banner = ctk.CTkFrame(
             self.feedback_container,
-            fg_color="#182333",
+            fg_color="#182338",
             corner_radius=Theme.CORNER_RADIUS_SM,
             border_width=1,
-            border_color="#1E3A8A"
+            border_color="#2563EB"
         )
         banner.pack(fill="x")
 
         content_frame = ctk.CTkFrame(banner, fg_color="transparent")
-        content_frame.pack(fill="x", padx=12, pady=8)
+        content_frame.pack(fill="x", padx=14, pady=10)
 
         msg_label = ctk.CTkLabel(
             content_frame,
-            text=f"💡 Este link não é válido aqui, mas pertence à aba \"{result.suggested_label}\".",
-            font=Theme.FONT_BODY,
-            text_color="#93C5FD",
+            text=f"💡 Este link pertence à aba \"{result.suggested_label}\". Deseja alternar agora?",
+            font=Theme.FONT_BODY_BOLD,
+            text_color="#BFDBFE",
             justify="left"
         )
         msg_label.pack(side="left", padx=(0, 10))
@@ -154,8 +160,9 @@ class UrlInputBar(ctk.CTkFrame):
             text=f"Ir para {result.suggested_label} e Analisar ➜",
             fg_color=Theme.PRIMARY,
             hover_color=Theme.PRIMARY_HOVER,
-            font=Theme.FONT_BODY_BOLD,
-            height=30,
+            text_color=Theme.TEXT_MAIN,
+            font=Theme.FONT_BUTTON,
+            height=32,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=lambda: self._trigger_cross_redirect(result.suggested_module, result.url)
         )
@@ -168,14 +175,22 @@ class UrlInputBar(ctk.CTkFrame):
 
     def show_error(self, message: str):
         self.clear_feedback()
-        self.feedback_container.pack(fill="x", pady=(4, 0))
-        lbl = ctk.CTkLabel(
+        self.feedback_container.pack(fill="x", pady=(6, 0))
+        err_card = ctk.CTkFrame(
             self.feedback_container,
-            text=f"⚠️ {message}",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.DANGER
+            fg_color="#2A1618",
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color="#991B1B"
         )
-        lbl.pack(anchor="w", padx=4, pady=(2, 0))
+        err_card.pack(fill="x")
+        lbl = ctk.CTkLabel(
+            err_card,
+            text=f"⚠️ {message}",
+            font=Theme.FONT_BODY,
+            text_color="#FCA5A5"
+        )
+        lbl.pack(anchor="w", padx=12, pady=8)
 
     def show_info(self, message: str):
         self.clear_feedback()

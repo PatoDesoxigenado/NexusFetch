@@ -1,56 +1,93 @@
-"""Definições de Tema e Paleta de Cores do Nexus Fetch."""
+"""Definições de Tema Adaptativo (Claro/Escuro), Alto Contraste e Tipografia Moderna do Nexus Fetch."""
+import sys
+
+def _resolve_fonts():
+    """Define a família de fontes moderna por sistema sem instanciar janelas temporárias."""
+    if sys.platform == "win32":
+        return "Segoe UI Variable Text", "Segoe UI Variable Display"
+    elif sys.platform == "darwin":
+        return "SF Pro Text", "SF Pro Display"
+    else:
+        return "DejaVu Sans", "DejaVu Sans"
+
+_FAMILY, _DISPLAY = _resolve_fonts()
 
 class Theme:
-    # Cores de Fundo e Containers
-    BG_DARK = "#0D0E11"           # Fundo da janela principal
-    BG_CARD = "#16171B"           # Fundo de cards, previews e seções
-    BG_CARD_LIGHT = "#1F2126"     # Containers secundários
-    BG_INPUT = "#131417"          # Fundo de campos de texto
+    # -------------------------------------------------------------------------
+    # 1. Cores de Fundo e Containers Elevados
+    # Padrão CustomTkinter: (Modo Claro, Modo Escuro)
+    # -------------------------------------------------------------------------
+    BG_DARK = ("#F1F3F7", "#0F1015")           # Fundo da janela principal (Claro: Cinza claro moderno / Escuro: Deep Dark)
+    BG_CARD = ("#FFFFFF", "#1A1D24")           # Fundo de cards, previews e painéis (Claro: Branco puro / Escuro: Card elevado)
+    BG_CARD_LIGHT = ("#F8FAFC", "#242832")     # Containers secundários, listas e cabeçalhos
+    BG_INPUT = ("#F1F5F9", "#13151B")          # Fundo de campos de texto e caixas de seleção
     
-    # Bordas e Divisores
-    BORDER = "#2B2D33"
-    BORDER_FOCUS = "#E50914"
+    # -------------------------------------------------------------------------
+    # 2. Bordas e Divisores (Contraste Nítido em Telas Diversas)
+    # -------------------------------------------------------------------------
+    BORDER = ("#CBD5E1", "#373D4A")            # Borda nítida padrão para cartões
+    BORDER_SUBTLE = ("#E2E8F0", "#2A2F3A")     # Divisores internos mais suaves
+    BORDER_FOCUS = ("#E50914", "#E50914")      # Vermelho no foco ativo
     
-    # Cores Primárias (Vermelho Nexus)
-    PRIMARY = "#E50914"           # Vermelho vibrante padrão
-    PRIMARY_HOVER = "#B80710"     # Vermelho mais escuro no hover
-    PRIMARY_ACTIVE = "#FF1F2B"    # Vermelho ativo/clicado
+    # -------------------------------------------------------------------------
+    # 3. Cores Primárias (Vermelho Nexus)
+    # -------------------------------------------------------------------------
+    PRIMARY = ("#E50914", "#E50914")           # Vermelho vibrante padrão
+    PRIMARY_HOVER = ("#C80812", "#B80710")     # Vermelho mais escuro no hover
+    PRIMARY_ACTIVE = ("#FF1F2B", "#FF1F2B")    # Vermelho ativo/clicado
     
-    # Cores Secundárias e Acentos
-    SECONDARY = "#22242A"
-    SECONDARY_HOVER = "#31343C"
+    # -------------------------------------------------------------------------
+    # 4. Cores Secundárias e Controles Neutros
+    # -------------------------------------------------------------------------
+    SECONDARY = ("#E2E8F0", "#2A2E39")         # Fundo de botões secundários
+    SECONDARY_HOVER = ("#CBD5E1", "#3A404F")   # Hover de botões secundários
     
-    # Cores Exclusivas do Conversor de Mídia (Destaque Visual)
-    CONVERTER_PRIMARY = "#8B5CF6"         # Violeta vibrante
-    CONVERTER_HOVER = "#7C3AED"           # Roxo escuro no hover
-    CONVERTER_ACTIVE = "#6D28D9"          # Roxo ativo/clicado
-    CONVERTER_BORDER = "#8B5CF6"          # Borda com brilho violeta
-    CONVERTER_BG_LIGHT = "#1A1728"        # Fundo suave para cards do conversor
-
+    # -------------------------------------------------------------------------
+    # 5. Módulo Conversor de Mídia (Destaque Violeta de Alto Contraste)
+    # -------------------------------------------------------------------------
+    CONVERTER_PRIMARY = ("#7C3AED", "#8B5CF6") # Violeta vibrante principal
+    CONVERTER_HOVER = ("#6D28D9", "#7C3AED")   # Roxo escuro no hover
+    CONVERTER_ACTIVE = ("#5B21B6", "#6D28D9")  # Roxo ativo/clicado
+    CONVERTER_BORDER = ("#8B5CF6", "#7C3AED")  # Borda com brilho violeta perceptível
+    CONVERTER_BG_LIGHT = ("#F5F3FF", "#1C172E")# Fundo do card explicativo
+    CONVERTER_TEXT_BRIGHT = ("#6D28D9", "#C4B5FD") # Roxo no claro, lavanda brilhante no escuro
     
-    # Status e Ações
-    SUCCESS = "#10B981"           # Verde conclusão
-    SUCCESS_HOVER = "#059669"
-    WARNING = "#F59E0B"           # Âmbar aviso
-    INFO = "#3B82F6"              # Azul informação
-    DANGER = "#EF4444"
+    # -------------------------------------------------------------------------
+    # 6. Status, Indicadores e Ações
+    # -------------------------------------------------------------------------
+    SUCCESS = ("#059669", "#10B981")           # Verde conclusão / pronto
+    SUCCESS_HOVER = ("#047857", "#059669")
+    WARNING = ("#D97706", "#F59E0B")           # Âmbar aviso
+    INFO = ("#2563EB", "#3B82F6")              # Azul informação
+    DANGER = ("#DC2626", "#EF4444")            # Vermelho perigo / erro
     
-    # Tipografia e Cores de Texto
-    TEXT_MAIN = "#FFFFFF"         # Branco absoluto para títulos e ênfase
-    TEXT_MUTED = "#9CA3AF"        # Cinza para descrições e legendas
-    TEXT_DIM = "#6B7280"          # Cinza escuro para detalhes sutis
-    TEXT_INVERTED = "#000000"     # Preto para sobreposição
+    # -------------------------------------------------------------------------
+    # 7. Tipografia e Cores de Texto (Legibilidade e WCAG AA+)
+    # -------------------------------------------------------------------------
+    TEXT_MAIN = ("#0F172A", "#FFFFFF")         # Quase preto no claro / Branco puro no escuro
+    TEXT_NORMAL = ("#1E293B", "#E5E7EB")       # Cinza ardósia / Cinza claro
+    TEXT_MUTED = ("#475569", "#B6BCC6")        # Cinza médio nítido
+    TEXT_DIM = ("#64748B", "#8B95A5")          # Cinza suave legível
+    TEXT_INVERTED = ("#FFFFFF", "#0F1015")     # Cor para sobreposição
     
-    # Fontes
-    FONT_FAMILY = "Segoe UI"
-    FONT_TITLE = ("Segoe UI", 20, "bold")
-    FONT_SUBTITLE = ("Segoe UI", 14, "bold")
-    FONT_BODY = ("Segoe UI", 12)
-    FONT_BODY_BOLD = ("Segoe UI", 12, "bold")
-    FONT_SMALL = ("Segoe UI", 10)
-    FONT_BADGE = ("Segoe UI", 9, "bold")
+    # -------------------------------------------------------------------------
+    # 8. Escala Tipográfica Moderna
+    # -------------------------------------------------------------------------
+    FONT_FAMILY = _FAMILY
+    FONT_DISPLAY = _DISPLAY
+    FONT_TITLE = (_DISPLAY, 20, "bold")
+    FONT_SUBTITLE = (_DISPLAY, 14, "bold")
+    FONT_BODY = (_FAMILY, 12)
+    FONT_BODY_BOLD = (_FAMILY, 12, "bold")
+    FONT_BUTTON = (_FAMILY, 12, "bold")
+    FONT_SMALL = (_FAMILY, 10)
+    FONT_SMALL_BOLD = (_FAMILY, 10, "bold")
+    FONT_BADGE = (_FAMILY, 10, "bold")
+    FONT_MONO = ("Consolas", 11)
     
-    # Raio de Borda (Corner Radius)
+    # -------------------------------------------------------------------------
+    # 9. Raio de Borda (Corner Radius)
+    # -------------------------------------------------------------------------
     CORNER_RADIUS = 10
     CORNER_RADIUS_SM = 6
     CORNER_RADIUS_LG = 14

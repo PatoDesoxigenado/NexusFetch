@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Nexus Fetch"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.15"
 APP_DESCRIPTION = "Downloader & Conversor Desktop de Alta Performance"
 
 # Resolução da Janela
@@ -44,3 +44,6 @@ def get_resource_path(relative_path: str) -> str:
 ASSETS_DIR = get_resource_path("assets")
 ICON_ICO_PATH = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH = os.path.join(ASSETS_DIR, "icon.png")
+LOGO_YOUTUBE_PATH = os.path.join(ASSETS_DIR, "YouTube_full-color_icon_(2017).png")
+LOGO_INSTAGRAM_PATH = os.path.join(ASSETS_DIR, "Instagram_logo_2022.svg.png")
+LOGO_TWITTER_PATH = os.path.join(ASSETS_DIR, "twitter-x-logo-png_seeklogo-492396.png")

@@ -59,10 +59,39 @@ class NexusFetchApp(ctk.CTk):
 
         # Construção da Interface
         self._build_ui()
+        self._setup_global_shortcuts()
 
         # Executa a rotina de diagnóstico de inicialização
         self.after(200, self._perform_startup_check)
         self.after(500, self._start_background_update_checks)
+
+    def _setup_global_shortcuts(self):
+        """Configura atalhos de teclado globais para usuários frequentes (Regra 2 de Shneiderman)."""
+        self.bind_all("<Control-Key-1>", lambda e: self.navbar.select_tab_by_index(0))
+        self.bind_all("<Control-Key-2>", lambda e: self.navbar.select_tab_by_index(1))
+        self.bind_all("<Control-Key-3>", lambda e: self.navbar.select_tab_by_index(2))
+        self.bind_all("<Control-Key-4>", lambda e: self.navbar.select_tab_by_index(3))
+
+        self.bind_all("<Control-v>", self._handle_global_paste)
+        self.bind_all("<Control-V>", self._handle_global_paste)
+        self.bind_all("<Escape>", self._handle_global_escape)
+
+    def _handle_global_paste(self, event=None):
+        if self.active_module != MODULE_CONVERTER:
+            try:
+                self.url_bar.entry_url.focus_set()
+            except Exception:
+                pass
+
+    def _handle_global_escape(self, event=None):
+        if self.active_module == MODULE_CONVERTER:
+            if getattr(self.converter_view, "is_converting", False):
+                self.converter_view._cancel_conversion()
+        else:
+            if getattr(self.downloader, "is_downloading", False):
+                self._cancel_download()
+            else:
+                self.url_bar.clear_feedback()
 
     def run_on_ui(self, func, *args):
         """Agrega chamadas à fila thread-safe para execução na thread principal do Tkinter."""
@@ -153,7 +182,7 @@ class NexusFetchApp(ctk.CTk):
             w_content,
             text="Cole o link do YouTube, Twitter/X ou Instagram acima e clique em 'Analisar' para ver a prévia e opções de download.",
             font=Theme.FONT_BODY,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         ).pack(anchor="w", pady=(0, 12))
 
         pills_row = ctk.CTkFrame(w_content, fg_color="transparent")
@@ -184,13 +213,19 @@ class NexusFetchApp(ctk.CTk):
         )
 
     def _add_badge(self, parent, text: str):
-        badge = ctk.CTkFrame(parent, fg_color=Theme.BG_DARK, corner_radius=Theme.CORNER_RADIUS_SM)
+        badge = ctk.CTkFrame(
+            parent,
+            fg_color=Theme.BG_CARD_LIGHT,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE
+        )
         badge.pack(side="left", padx=(0, 8), pady=2)
         ctk.CTkLabel(
             badge,
             text=text,
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.TEXT_NORMAL
         ).pack(padx=10, pady=4)
 
     def _perform_startup_check(self):

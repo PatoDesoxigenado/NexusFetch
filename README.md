@@ -4,7 +4,7 @@
 > **Converta suas mídias com máxima qualidade e aceleração local nativa via FFmpeg.**  
 > Sem anúncios invasivos, sem pop-ups, sem redirecionamentos suspeitos e sem vírus.
 
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.0-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.15-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen.svg)](https://www.python.org/)
 [![Plataformas](https://img.shields.io/badge/plataformas-Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)

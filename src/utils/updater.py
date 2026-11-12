@@ -253,14 +253,19 @@ def apply_app_update_and_restart():
     target_exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
 
     if sys.platform == "win32":
-        # Script batch autolimpante desanexado para substituir o executável e reiniciar
+        # Script batch autolimpante desanexado para substituir o executável e reiniciar.
+        # CRÍTICO: Limpar _MEIPASS e _MEIPASS2 para evitar que o novo executável tente
+        # carregar python311.dll da pasta temporária antiga que está sendo deletada.
         batch_script = os.path.join(tempfile.gettempdir(), f"nexus_updater_{int(time.time())}.bat")
         script_content = f"""@echo off
-timeout /t 1 /nobreak > NUL
+setlocal
+set _MEIPASS2=
+set _MEIPASS=
+ping 127.0.0.1 -n 2 > nul
 :retry
-move /y "{ready_dest}" "{target_exe}" > NUL 2>&1
+move /y "{ready_dest}" "{target_exe}" > nul 2>&1
 if errorlevel 1 (
-    timeout /t 1 /nobreak > NUL
+    ping 127.0.0.1 -n 2 > nul
     goto retry
 )
 start "" "{target_exe}" --updated
@@ -271,7 +276,10 @@ del "%~f0"
 
         CREATE_NO_WINDOW = 0x08000000
         DETACHED_PROCESS = 0x00000008
-        subprocess.Popen(["cmd.exe", "/c", batch_script], creationflags=CREATE_NO_WINDOW | DETACHED_PROCESS)
+        env = os.environ.copy()
+        env.pop('_MEIPASS2', None)
+        env.pop('_MEIPASS', None)
+        subprocess.Popen(["cmd.exe", "/c", batch_script], creationflags=CREATE_NO_WINDOW | DETACHED_PROCESS, env=env)
         os._exit(0)
 
     else:

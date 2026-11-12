@@ -37,7 +37,7 @@ class DownloadActionSection(ctk.CTkFrame):
             self.info_row,
             text="Pronto para baixar",
             font=Theme.FONT_BODY_BOLD,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_MAIN
         )
         self.lbl_status.pack(side="left")
 
@@ -47,23 +47,23 @@ class DownloadActionSection(ctk.CTkFrame):
         self.lbl_speed = ctk.CTkLabel(
             self.metrics_frame,
             text="",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_speed.pack(side="left", padx=(0, 12))
 
         self.lbl_eta = ctk.CTkLabel(
             self.metrics_frame,
             text="",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_eta.pack(side="left")
 
         # 2. Barra de Progresso
         self.progress_bar = ctk.CTkProgressBar(
             self.container,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             progress_color=Theme.PRIMARY,
             height=10,
             corner_radius=Theme.CORNER_RADIUS_SM
@@ -78,12 +78,14 @@ class DownloadActionSection(ctk.CTkFrame):
         # Botão Cancelar (oculto por padrão)
         self.btn_cancel = ctk.CTkButton(
             self.action_row,
-            text="✖ Cancelar",
-            fg_color="#374151",
-            hover_color="#4B5563",
-            font=Theme.FONT_BODY,
-            width=100,
-            height=40,
+            text="✖ Cancelar (Esc)",
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.DANGER,
+            font=Theme.FONT_BUTTON,
+            border_width=1,
+            border_color=Theme.BORDER,
+            width=130,
+            height=44,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_cancel_click
         )
@@ -92,11 +94,12 @@ class DownloadActionSection(ctk.CTkFrame):
         self.btn_open_folder = ctk.CTkButton(
             self.action_row,
             text="📂 Abrir Pasta",
-            fg_color=Theme.SECONDARY,
-            hover_color=Theme.SECONDARY_HOVER,
-            font=Theme.FONT_BODY_BOLD,
-            width=130,
-            height=40,
+            fg_color=Theme.SUCCESS,
+            hover_color=Theme.SUCCESS_HOVER,
+            text_color="#FFFFFF",
+            font=Theme.FONT_BUTTON,
+            width=140,
+            height=44,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_open_folder_click
         )

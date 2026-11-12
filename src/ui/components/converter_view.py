@@ -129,7 +129,7 @@ class ConverterView(ctk.CTkFrame):
             drop_inner,
             text="Ou clique nesta área para escolher arquivos pelo Explorador (suporta múltiplos arquivos simultâneos)",
             font=Theme.FONT_BODY,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         self.drop_sub.pack(pady=(0, 12))
         self.drop_sub.bind("<Button-1>", lambda e: self._open_file_dialog())
@@ -137,12 +137,12 @@ class ConverterView(ctk.CTkFrame):
         self.btn_select_files = ctk.CTkButton(
             drop_inner,
             text="📁 Selecionar Arquivos no Computador",
-            font=Theme.FONT_BODY_BOLD,
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.CONVERTER_PRIMARY,
             hover_color=Theme.CONVERTER_HOVER,
             text_color=Theme.TEXT_MAIN,
-            height=38,
-            width=260,
+            height=40,
+            width=270,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._open_file_dialog
         )
@@ -237,7 +237,7 @@ class ConverterView(ctk.CTkFrame):
             fmt_group,
             text="FORMATO DE DESTINO:",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         ).pack(anchor="w", pady=(0, 4))
 
         self.menu_format = ctk.CTkOptionMenu(
@@ -245,11 +245,13 @@ class ConverterView(ctk.CTkFrame):
             variable=self.var_target_format,
             values=TARGET_VIDEO_FORMATS + ["MP3 (Extrair Áudio 320k)"],
             font=Theme.FONT_BODY,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             button_color=Theme.SECONDARY,
             button_hover_color=Theme.SECONDARY_HOVER,
-            dropdown_fg_color=Theme.BG_CARD,
-            dropdown_hover_color=Theme.SECONDARY,
+            dropdown_fg_color=Theme.BG_CARD_LIGHT,
+            dropdown_hover_color=Theme.CONVERTER_PRIMARY,
+            text_color=Theme.TEXT_MAIN,
+            dropdown_text_color=Theme.TEXT_MAIN,
             height=34,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._on_format_changed
@@ -264,7 +266,7 @@ class ConverterView(ctk.CTkFrame):
             self.res_group,
             text="RESOLUÇÃO DE VÍDEO:",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_res.pack(anchor="w", pady=(0, 4))
 
@@ -274,11 +276,13 @@ class ConverterView(ctk.CTkFrame):
             variable=self.var_resolution,
             values=res_labels,
             font=Theme.FONT_BODY,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             button_color=Theme.SECONDARY,
             button_hover_color=Theme.SECONDARY_HOVER,
-            dropdown_fg_color=Theme.BG_CARD,
-            dropdown_hover_color=Theme.SECONDARY,
+            dropdown_fg_color=Theme.BG_CARD_LIGHT,
+            dropdown_hover_color=Theme.CONVERTER_PRIMARY,
+            text_color=Theme.TEXT_MAIN,
+            dropdown_text_color=Theme.TEXT_MAIN,
             height=34,
             corner_radius=Theme.CORNER_RADIUS_SM
         )
@@ -292,7 +296,7 @@ class ConverterView(ctk.CTkFrame):
             self.codec_group,
             text="CODEC (LIBERADO EM MP4 ➔ MP4):",
             font=Theme.FONT_BADGE,
-            text_color=Theme.TEXT_MUTED
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_codec.pack(anchor="w", pady=(0, 4))
 
@@ -302,11 +306,13 @@ class ConverterView(ctk.CTkFrame):
             variable=self.var_codec,
             values=codec_labels,
             font=Theme.FONT_BODY,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             button_color=Theme.SECONDARY,
             button_hover_color=Theme.SECONDARY_HOVER,
-            dropdown_fg_color=Theme.BG_CARD,
-            dropdown_hover_color=Theme.SECONDARY,
+            dropdown_fg_color=Theme.BG_CARD_LIGHT,
+            dropdown_hover_color=Theme.CONVERTER_PRIMARY,
+            text_color=Theme.TEXT_MAIN,
+            dropdown_text_color=Theme.TEXT_MAIN,
             height=34,
             corner_radius=Theme.CORNER_RADIUS_SM
         )
@@ -319,21 +325,23 @@ class ConverterView(ctk.CTkFrame):
         self.lbl_dest_path = ctk.CTkLabel(
             dest_row,
             text=f"SALVAR EM: {self.download_dir}",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED,
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.TEXT_NORMAL,
             anchor="w"
         )
         self.lbl_dest_path.pack(side="left", fill="x", expand=True)
 
         btn_change_dir = ctk.CTkButton(
             dest_row,
-            text="Alterar Pasta",
-            font=Theme.FONT_SMALL,
+            text="📁 Alterar Pasta",
+            font=Theme.FONT_SMALL_BOLD,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.SECONDARY_HOVER,
-            text_color=Theme.TEXT_MAIN,
-            height=26,
-            width=100,
+            text_color=Theme.TEXT_NORMAL,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            height=28,
+            width=115,
             corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._change_output_directory
         )
@@ -367,18 +375,18 @@ class ConverterView(ctk.CTkFrame):
         self.lbl_metrics = ctk.CTkLabel(
             self.status_row,
             text="",
-            font=Theme.FONT_SMALL,
-            text_color=Theme.TEXT_MUTED
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.TEXT_NORMAL
         )
         self.lbl_metrics.pack(side="right")
 
         # Barra de Progresso
         self.progress_bar = ctk.CTkProgressBar(
             act_inner,
-            fg_color=Theme.BG_DARK,
+            fg_color=Theme.BG_INPUT,
             progress_color=Theme.CONVERTER_PRIMARY,
-            height=8,
-            corner_radius=4
+            height=10,
+            corner_radius=Theme.CORNER_RADIUS_SM
         )
         self.progress_bar.set(0.0)
         self.progress_bar.pack(fill="x", pady=(0, 12))
@@ -390,53 +398,61 @@ class ConverterView(ctk.CTkFrame):
         self.btn_convert = ctk.CTkButton(
             btn_row,
             text="⚡ CONVERTER ARQUIVOS",
-            font=("Segoe UI", 13, "bold"),
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.CONVERTER_PRIMARY,
             hover_color=Theme.CONVERTER_HOVER,
             text_color=Theme.TEXT_MAIN,
-            height=42,
-            corner_radius=Theme.CORNER_RADIUS,
+            height=44,
+            corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._start_conversion
         )
         self.btn_convert.pack(side="left", fill="x", expand=True)
 
         self.btn_cancel = ctk.CTkButton(
             btn_row,
-            text="⛔ Cancelar",
-            font=Theme.FONT_BODY_BOLD,
+            text="⛔ Cancelar (Esc)",
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.SECONDARY,
             hover_color=Theme.DANGER,
             text_color=Theme.TEXT_MAIN,
-            height=42,
-            width=120,
-            corner_radius=Theme.CORNER_RADIUS,
+            border_width=1,
+            border_color=Theme.BORDER,
+            height=44,
+            width=140,
+            corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._cancel_conversion
         )
 
         self.btn_open_folder = ctk.CTkButton(
             btn_row,
             text="📂 Abrir Pasta",
-            font=Theme.FONT_BODY_BOLD,
+            font=Theme.FONT_BUTTON,
             fg_color=Theme.SUCCESS,
             hover_color=Theme.SUCCESS_HOVER,
-            text_color=Theme.TEXT_MAIN,
-            height=42,
-            width=140,
-            corner_radius=Theme.CORNER_RADIUS,
+            text_color="#FFFFFF",
+            height=44,
+            width=150,
+            corner_radius=Theme.CORNER_RADIUS_SM,
             command=self._open_output_folder
         )
 
         self._refresh_codec_state()
 
     def _create_info_badge(self, parent, text: str):
-        badge = ctk.CTkFrame(parent, fg_color=Theme.BG_DARK, corner_radius=Theme.CORNER_RADIUS_SM)
+        badge = ctk.CTkFrame(
+            parent,
+            fg_color=Theme.BG_CARD,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.CONVERTER_BORDER
+        )
         badge.pack(side="left", padx=(0, 8), pady=2)
         ctk.CTkLabel(
             badge,
             text=text,
-            font=Theme.FONT_SMALL,
-            text_color="#C4B5FD"
-        ).pack(padx=8, pady=3)
+            font=Theme.FONT_SMALL_BOLD,
+            text_color=Theme.CONVERTER_TEXT_BRIGHT
+        ).pack(padx=10, pady=4)
 
     def _setup_drag_and_drop(self):
         """Conecta o arrastar e soltar (Drag and Drop) no Windows se disponível."""
@@ -530,11 +546,17 @@ class ConverterView(ctk.CTkFrame):
 
         # Cria linha para cada arquivo
         for f in self.selected_files:
-            row = ctk.CTkFrame(self.files_scroll, fg_color=Theme.BG_DARK, corner_radius=Theme.CORNER_RADIUS_SM)
+            row = ctk.CTkFrame(
+                self.files_scroll,
+                fg_color=Theme.BG_CARD_LIGHT,
+                corner_radius=Theme.CORNER_RADIUS_SM,
+                border_width=1,
+                border_color=Theme.BORDER_SUBTLE
+            )
             row.pack(fill="x", pady=2)
 
             icon_str = "🎥" if f.is_video else "🎵"
-            ctk.CTkLabel(row, text=icon_str, font=("Segoe UI", 14)).pack(side="left", padx=(10, 6))
+            ctk.CTkLabel(row, text=icon_str, font=("Segoe UI", 16)).pack(side="left", padx=(10, 6))
 
             # Nome e detalhes
             name_text = f.name if len(f.name) <= 45 else f"{f.name[:42]}..."
@@ -546,21 +568,21 @@ class ConverterView(ctk.CTkFrame):
             text_frame.pack(side="left", fill="x", expand=True, padx=4, pady=4)
 
             ctk.CTkLabel(text_frame, text=name_text, font=Theme.FONT_BODY_BOLD, text_color=Theme.TEXT_MAIN, anchor="w").pack(fill="x")
-            ctk.CTkLabel(text_frame, text=details_text, font=Theme.FONT_SMALL, text_color=Theme.TEXT_MUTED, anchor="w").pack(fill="x")
+            ctk.CTkLabel(text_frame, text=details_text, font=Theme.FONT_SMALL, text_color=Theme.TEXT_NORMAL, anchor="w").pack(fill="x")
 
             # Formato original tag
-            ctk.CTkLabel(row, text=f.ext.upper(), font=Theme.FONT_BADGE, text_color=Theme.CONVERTER_PRIMARY).pack(side="left", padx=8)
+            ctk.CTkLabel(row, text=f.ext.upper(), font=Theme.FONT_BADGE, text_color=Theme.CONVERTER_TEXT_BRIGHT).pack(side="left", padx=8)
 
             # Botão remover
             btn_remove = ctk.CTkButton(
                 row,
                 text="✖",
-                font=("Segoe UI", 11),
+                font=("Segoe UI", 11, "bold"),
                 width=24,
                 height=24,
                 fg_color="transparent",
-                hover_color=Theme.BG_CARD,
-                text_color=Theme.TEXT_MUTED,
+                hover_color=Theme.DANGER,
+                text_color=Theme.TEXT_NORMAL,
                 command=lambda p=f.path: self._remove_file(p)
             )
             btn_remove.pack(side="right", padx=(0, 8))
@@ -668,8 +690,8 @@ class ConverterView(ctk.CTkFrame):
         self.menu_codec.configure(state="disabled")
 
         self.progress_bar.set(0.0)
-        self.lbl_status.configure(text="Iniciando conversão...", text_color=Theme.CONVERTER_PRIMARY)
-        self.lbl_metrics.configure(text="")
+        self.lbl_status.configure(text="Iniciando conversão acelerada...", text_color=Theme.CONVERTER_TEXT_BRIGHT)
+        self.lbl_metrics.configure(text="", text_color=Theme.TEXT_NORMAL)
 
         # Mapeia resolução selecionada
         res_label = self.var_resolution.get()
@@ -695,9 +717,12 @@ class ConverterView(ctk.CTkFrame):
             def on_progress(file_idx, total_files, file_pct, total_pct, speed_str, status_msg):
                 def update_ui():
                     self.progress_bar.set(total_pct / 100.0)
-                    self.lbl_status.configure(text=f"[{file_idx}/{total_files}] {status_msg}")
+                    self.lbl_status.configure(
+                        text=f"[{file_idx}/{total_files}] {status_msg}",
+                        text_color=Theme.CONVERTER_TEXT_BRIGHT
+                    )
                     metrics_str = f"Velocidade: {speed_str} • Geral: {total_pct:.1f}%"
-                    self.lbl_metrics.configure(text=metrics_str)
+                    self.lbl_metrics.configure(text=metrics_str, text_color=Theme.TEXT_NORMAL)
                 self.app.run_on_ui(update_ui)
 
             success, total, errors = self.converter.convert_batch(
