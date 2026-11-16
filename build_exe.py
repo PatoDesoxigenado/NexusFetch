@@ -31,6 +31,11 @@ def build():
     assets_dir = os.path.join(base_dir, "assets")
     icon_path = os.path.join(assets_dir, "icon.ico")
     ctk_dir = os.path.dirname(customtkinter.__file__)
+    work_dir = os.path.join(base_dir, "build", "win")
+
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir, ignore_errors=True)
+    os.makedirs(work_dir, exist_ok=True)
 
     sep = ";"
 
@@ -39,6 +44,8 @@ def build():
         "--name=NexusFetch",
         "--noconsole",
         "--onefile",
+        f"--workpath={work_dir}",
+        f"--specpath={work_dir}",
         f"--icon={icon_path}",
         f"--add-data={assets_dir}{sep}assets",
         f"--add-data={ctk_dir}{sep}customtkinter",

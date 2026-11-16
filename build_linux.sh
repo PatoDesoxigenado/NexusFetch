@@ -59,10 +59,16 @@ echo "[2/4] Diretório de Assets: $ASSETS_DIR"
 echo "[2/4] Diretório do CustomTkinter: $CTK_DIR"
 
 echo "[3/4] Executando PyInstaller para Linux..."
+WORK_DIR="$SCRIPT_DIR/build/linux"
+rm -rf "$WORK_DIR"
+mkdir -p "$WORK_DIR"
+
 "$PYTHON_EXEC" -m PyInstaller main.py \
     --name="NexusFetch" \
     --noconsole \
     --onefile \
+    --workpath="$WORK_DIR" \
+    --specpath="$WORK_DIR" \
     --icon="$ICON_PNG" \
     --add-data="$ASSETS_DIR:assets" \
     --add-data="$CTK_DIR:customtkinter" \

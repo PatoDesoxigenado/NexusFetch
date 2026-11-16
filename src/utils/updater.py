@@ -205,8 +205,18 @@ def download_app_update(update_info: Dict, on_progress: Optional[Callable[[float
                         pct = (downloaded / total_bytes) * 100.0
                         on_progress(pct)
 
-        # Valida tamanho do binário baixado (> 20 MB)
+        # Valida tamanho do binário baixado (> 20 MB) e cabeçalho mágico da plataforma
         if os.path.exists(temp_dest) and os.path.getsize(temp_dest) > 20 * 1024 * 1024:
+            with open(temp_dest, "rb") as f_hdr:
+                magic = f_hdr.read(4)
+            is_valid_bin = (
+                magic[:2] == b"MZ" if bin_name.endswith(".exe") else magic == b"\x7fELF"
+            )
+            if not is_valid_bin:
+                log_error(f"Binário baixado inválido para {bin_name} (header: {magic!r}).")
+                os.remove(temp_dest)
+                return False
+
             if os.path.exists(ready_dest):
                 os.remove(ready_dest)
             os.rename(temp_dest, ready_dest)
