@@ -389,20 +389,26 @@ class NexusFetchApp(ctk.CTk):
 
         if metadata.is_playlist:
             sel_count = sum(1 for it in metadata.playlist_items if it.is_selected)
-            btn_text = f"⚡ BAIXAR {sel_count} VÍDEO{'S' if sel_count != 1 else ''}"
+            is_carousel = metadata.media_type == "carousel"
+            noun = "MÍDIA" if is_carousel else "VÍDEO"
+            empty_msg = "Nenhuma mídia selecionada" if is_carousel else "Nenhum vídeo selecionado"
+            btn_text = f"⚡ BAIXAR {sel_count} {noun}{'S' if sel_count != 1 else ''}"
             self.action_section.show_ready_state(custom_text=btn_text)
             if sel_count == 0:
-                self.action_section.set_download_button_text("Nenhum vídeo selecionado", enabled=False)
+                self.action_section.set_download_button_text(empty_msg, enabled=False)
         else:
             self.action_section.show_ready_state()
 
     def _on_playlist_selection_changed(self, selected_count: int, total_count: int):
-        """Callback acionado sempre que um item da playlist for marcado ou desmarcado."""
+        """Callback acionado sempre que um item da playlist ou carrossel for marcado ou desmarcado."""
+        is_carousel = bool(self.current_metadata and self.current_metadata.media_type == "carousel")
+        noun = "MÍDIA" if is_carousel else "VÍDEO"
+        empty_msg = "Nenhuma mídia selecionada" if is_carousel else "Nenhum vídeo selecionado"
         if selected_count > 0:
-            btn_text = f"⚡ BAIXAR {selected_count} VÍDEO{'S' if selected_count != 1 else ''}"
+            btn_text = f"⚡ BAIXAR {selected_count} {noun}{'S' if selected_count != 1 else ''}"
             self.action_section.set_download_button_text(btn_text, enabled=True)
         else:
-            self.action_section.set_download_button_text("Nenhum vídeo selecionado", enabled=False)
+            self.action_section.set_download_button_text(empty_msg, enabled=False)
 
     def _on_format_options_changed(self):
         pass

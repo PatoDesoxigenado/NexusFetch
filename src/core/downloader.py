@@ -51,6 +51,35 @@ class MediaDownloader:
         """Sinaliza para cancelar o download em andamento."""
         self._is_cancelled = True
 
+    @staticmethod
+    def _infer_extension(media_url: str, item_type: str = "image") -> str:
+        """Infere a extensão do arquivo a partir da URL da CDN ou tipo do item."""
+        import urllib.parse
+        path_lower = urllib.parse.urlparse(media_url).path.lower()
+        for ext in (".mp4", ".mov", ".webm", ".png", ".webp", ".jpg", ".jpeg"):
+            if path_lower.endswith(ext):
+                return ".jpg" if ext == ".jpeg" else ext
+        return ".mp4" if item_type == "video" else ".jpg"
+
+    @staticmethod
+    def _download_direct_media_bytes(media_url: str) -> bytes:
+        """Baixa os bytes de uma URL direta de imagem/vídeo via curl_cffi com fallback urllib."""
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(media_url, impersonate="chrome", timeout=15, verify=False)
+            if resp.status_code == 200 and len(resp.content) > 0:
+                return resp.content
+        except Exception:
+            pass
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,video/*,*/*;q=0.8',
+        }
+        req = urllib.request.Request(media_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.read()
+
     def download_async(
         self,
         url: str,
@@ -96,7 +125,64 @@ class MediaDownloader:
         ffmpeg_location = os.path.dirname(ffmpeg_path) if (ffmpeg_ok and ffmpeg_path) else None
 
         # -------------------------------------------------------------
-        # CASO 0: Download de PLAYLIST DO YOUTUBE
+        # CASO 0A: Download de CARROSSEL / MÚLTIPLAS MÍDIAS (Instagram / Twitter)
+        # -------------------------------------------------------------
+        if media_type == "carousel" and playlist_items:
+            selected_items = [it for it in playlist_items if getattr(it, "is_selected", True)]
+            if not selected_items:
+                if on_complete:
+                    on_complete(False, "Nenhuma mídia foi selecionada.", "")
+                return
+
+            total_sel = len(selected_items)
+            start_t = time.time()
+            success_count = 0
+            final_path = output_dir
+
+            try:
+                for idx, item in enumerate(selected_items, 1):
+                    if self._is_cancelled:
+                        if on_complete:
+                            on_complete(False, f"Download cancelado ({success_count}/{total_sel} baixados).", final_path)
+                        return
+
+                    if on_status:
+                        on_status(f"[{idx}/{total_sel}] Baixando: {item.title}...")
+
+                    ext = self._infer_extension(item.url, getattr(item, "item_type", "image"))
+                    suffix = f"_{item.index:02d}" if (len(playlist_items) > 1 or total_sel > 1) else ""
+                    dest_file = os.path.join(output_dir, f"{safe_title}{suffix}{ext}")
+
+                    data = self._download_direct_media_bytes(item.url)
+                    with open(dest_file, "wb") as f:
+                        f.write(data)
+
+                    final_path = dest_file
+                    success_count += 1
+
+                    if on_progress:
+                        pct = (idx / total_sel) * 100.0
+                        elapsed = time.time() - start_t
+                        remaining_items = total_sel - idx
+                        if remaining_items > 0 and elapsed > 0.2:
+                            est_rem = int((elapsed / idx) * remaining_items)
+                            eta_str = f"ETA: {format_duration(est_rem)}"
+                        elif remaining_items > 0:
+                            eta_str = f"{remaining_items} restante(s)"
+                        else:
+                            eta_str = "Finalizando..."
+                        on_progress(min(99.9, pct) if remaining_items > 0 else 100.0, f"{idx}/{total_sel} mídias", eta_str, f"[{idx}/{total_sel}] {item.title}")
+
+                if on_complete:
+                    on_complete(True, f"{success_count} de {total_sel} mídias salvas com sucesso!", final_path)
+                return
+            except Exception as e:
+                if on_complete:
+                    on_complete(False, f"Falha ao baixar carrossel: {str(e)[:100]}", "")
+                return
+
+        # -------------------------------------------------------------
+        # CASO 0B: Download de PLAYLIST DO YOUTUBE
         # -------------------------------------------------------------
         if media_type == "playlist" or (playlist_items and len(playlist_items) > 0):
             selected_items = [it for it in (playlist_items or []) if getattr(it, "is_selected", True)]
@@ -222,50 +308,47 @@ class MediaDownloader:
         # -------------------------------------------------------------
         if mode == "image" or media_type == "image":
             try:
-                if on_status:
-                    on_status("Baixando imagem em alta resolução...")
-
                 target_urls = image_urls or [url]
+                total_imgs = len(target_urls)
+                start_t = time.time()
                 final_path = ""
 
                 for idx, img_url in enumerate(target_urls):
                     if self._is_cancelled:
                         raise Exception("Download cancelado pelo usuário.")
 
-                    ext = ".png" if ".png" in img_url.lower() else ".jpg"
-                    suffix = f"_{idx+1}" if len(target_urls) > 1 else ""
+                    if on_status:
+                        if total_imgs > 1:
+                            on_status(f"[{idx + 1}/{total_imgs}] Baixando imagem em alta resolução...")
+                        else:
+                            on_status("Baixando imagem em alta resolução...")
+
+                    ext = self._infer_extension(img_url, "image")
+                    suffix = f"_{idx+1}" if total_imgs > 1 else ""
                     dest_file = os.path.join(output_dir, f"{safe_title}{suffix}{ext}")
 
-                    data = None
-                    # 1. Tenta curl_cffi para CDN do Instagram / Meta
-                    try:
-                        from curl_cffi import requests as cffi_requests
-                        resp = cffi_requests.get(img_url, impersonate="chrome", timeout=15, verify=False)
-                        if resp.status_code == 200 and len(resp.content) > 0:
-                            data = resp.content
-                    except Exception:
-                        pass
-
-                    # 2. Fallback urllib padrão
-                    if data is None:
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                        }
-                        req = urllib.request.Request(img_url, headers=headers)
-                        with urllib.request.urlopen(req, timeout=15) as resp:
-                            data = resp.read()
-
+                    data = self._download_direct_media_bytes(img_url)
                     with open(dest_file, "wb") as f:
                         f.write(data)
 
                     final_path = dest_file
                     if on_progress:
-                        pct = ((idx + 1) / len(target_urls)) * 100.0
-                        on_progress(pct, "Concluído", "00:00", os.path.basename(dest_file))
+                        done_count = idx + 1
+                        pct = (done_count / total_imgs) * 100.0
+                        remaining = total_imgs - done_count
+                        elapsed = time.time() - start_t
+                        if remaining > 0 and elapsed > 0.2:
+                            eta_str = f"ETA: {format_duration(int((elapsed / done_count) * remaining))}"
+                        elif remaining > 0:
+                            eta_str = f"{remaining} restante(s)"
+                        else:
+                            eta_str = "Finalizando..."
+                        speed_label = f"{done_count}/{total_imgs} fotos" if total_imgs > 1 else "1/1 foto"
+                        on_progress(min(99.9, pct) if remaining > 0 else 100.0, speed_label, eta_str, os.path.basename(dest_file))
 
                 if on_complete:
-                    on_complete(True, "Imagem baixada com sucesso!", final_path)
+                    msg = f"{total_imgs} imagens baixadas com sucesso!" if total_imgs > 1 else "Imagem baixada com sucesso!"
+                    on_complete(True, msg, final_path)
                 return
 
             except Exception as e:

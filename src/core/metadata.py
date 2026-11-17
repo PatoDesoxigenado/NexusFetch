@@ -34,6 +34,7 @@ class PlaylistItem:
     thumbnail_url: Optional[str]
     uploader: Optional[str] = None
     is_selected: bool = True
+    item_type: str = "video"  # "video" | "image"
 
 @dataclass
 class MediaMetadata:
@@ -125,8 +126,97 @@ def extract_frame_with_ffmpeg(video_url_or_path: str, output_jpg_path: str) -> b
         log_error(f"Erro no FFmpeg ao extrair frame: {e}")
         return False
 
+def _upgrade_twitter_image_url_to_orig(img_url: str) -> str:
+    """Converte URLs de mídia do Twitter/X (pbs.twimg.com/media) para resolução original máxima (?name=orig)."""
+    if not img_url or "pbs.twimg.com/media/" not in img_url:
+        return img_url
+    import urllib.parse
+    parsed = urllib.parse.urlparse(img_url)
+    params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    params["name"] = ["orig"]
+    new_query = urllib.parse.urlencode(params, doseq=True)
+    return urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+
+def _deduplicate_media_urls(raw_urls: List[str]) -> List[str]:
+    """Remove URLs duplicadas mantendo a ordem original (comparando pelo caminho canônico sem query string)."""
+    import urllib.parse
+    unique_urls: List[str] = []
+    seen_keys = set()
+    for raw_url in raw_urls:
+        if not raw_url or not raw_url.startswith("http"):
+            continue
+        parsed = urllib.parse.urlparse(raw_url)
+        # Usa (path_basename ou path) para eliminar duplicatas de preview/download da mesma mídia
+        canonical_key = os.path.basename(parsed.path) or parsed.path or raw_url
+        if canonical_key not in seen_keys:
+            seen_keys.add(canonical_key)
+            unique_urls.append(raw_url)
+    return unique_urls
+
+
+def _is_video_media_url(media_url: str) -> bool:
+    """Detecta se uma URL direta de CDN aponta para vídeo (.mp4 / .mov / .webm)."""
+    import urllib.parse
+    path_lower = urllib.parse.urlparse(media_url).path.lower()
+    return path_lower.endswith((".mp4", ".mov", ".m4v", ".webm"))
+
+
+def _build_carousel_metadata(
+    url: str,
+    title: str,
+    uploader: str,
+    media_urls: List[str],
+    thumbnail_url: Optional[str],
+    raw_info: Optional[Dict] = None,
+) -> MediaMetadata:
+    """Estrutura metadados de postagens carrossel/múltiplas mídias (Instagram e Twitter/X) com seleção individual."""
+    items: List[PlaylistItem] = []
+    image_urls: List[str] = []
+
+    for idx, m_url in enumerate(media_urls, 1):
+        is_vid = _is_video_media_url(m_url)
+        item_type = "video" if is_vid else "image"
+        if not is_vid:
+            image_urls.append(m_url)
+        items.append(PlaylistItem(
+            index=idx,
+            video_id=f"slide_{idx}",
+            title=f"Vídeo {idx:02d}" if is_vid else f"Imagem {idx:02d}",
+            duration=0,
+            duration_str="🎬 Vídeo MP4" if is_vid else "🖼️ Foto HD",
+            url=m_url,
+            thumbnail_url=m_url if not is_vid else thumbnail_url,
+            uploader=uploader,
+            is_selected=True,
+            item_type=item_type,
+        ))
+
+    return MediaMetadata(
+        url=url,
+        title=title,
+        uploader=uploader,
+        duration=0,
+        duration_str=f"{len(items)} mídias",
+        thumbnail_url=thumbnail_url or (image_urls[0] if image_urls else None),
+        qualities=[
+            VideoQualityOption(
+                label="🖼️/🎬 Mídias Originais (Máxima Qualidade)",
+                height=None,
+                format_id="carousel_orig",
+            )
+        ],
+        media_type="carousel",
+        image_urls=image_urls,
+        is_playlist=True,
+        playlist_items=items,
+        playlist_count=len(items),
+        raw_info=raw_info or {},
+    )
+
+
 def fetch_uncropped_instagram_images(url: str) -> List[str]:
-    """Obtém as URLs das imagens originais completas sem o recorte quadrado de thumbnail."""
+    """Obtém as URLs das mídias originais completas sem recorte e sem duplicatas."""
     try:
         import urllib.parse
         from curl_cffi import requests as cffi_requests
@@ -143,12 +233,8 @@ def fetch_uncropped_instagram_images(url: str) -> List[str]:
         }
         resp = s.post('https://indown.io/download', data=data, timeout=6, verify=False)
         matches = re.findall(r'fetch\?url=([^"\'\s&]+)', resp.text)
-        urls = []
-        for m_url in matches:
-            decoded = urllib.parse.unquote(m_url)
-            if decoded.startswith('http') and decoded not in urls:
-                urls.append(decoded)
-        return urls
+        decoded_urls = [urllib.parse.unquote(m_url) for m_url in matches]
+        return _deduplicate_media_urls(decoded_urls)
     except Exception as e:
         log_warning(f"Falha ao obter imagem uncropped via indown: {e}")
         return []
@@ -252,10 +338,21 @@ def fetch_instagram_media(url: str) -> Optional[MediaMetadata]:
             raw_info={"shortcode": shortcode, "video_url": vid_url, "image_url": img_url}
         )
 
-    # Caso 2: É uma Foto / Imagem
+    # Caso 2: Carrossel / Foto / Imagem
     # og:image costuma vir com corte quadrado (ex: ?stp=c216.0.648.648a...).
-    # Busca a imagem completa sem recorte
+    # Busca as mídias originais completas sem recorte e sem duplicatas
     uncropped_urls = fetch_uncropped_instagram_images(post_url)
+    if len(uncropped_urls) > 1:
+        log_info(f"Carrossel Instagram detectado ({shortcode}): {len(uncropped_urls)} mídias únicas")
+        return _build_carousel_metadata(
+            url=url,
+            title=clean_title or f"Instagram Carrossel ({shortcode})",
+            uploader=author,
+            media_urls=uncropped_urls,
+            thumbnail_url=img_url or uncropped_urls[0],
+            raw_info={"shortcode": shortcode, "carousel_count": len(uncropped_urls), "uncropped": True},
+        )
+
     main_image = uncropped_urls[0] if uncropped_urls else img_url
     image_list = uncropped_urls if uncropped_urls else ([img_url] if img_url else [])
 
@@ -390,9 +487,23 @@ def extract_media_info(url: str) -> MediaMetadata:
                     for p in (photos or media_details):
                         p_url = p.get("url") or p.get("media_url_https")
                         if p_url:
-                            img_urls.append(p_url)
+                            img_urls.append(_upgrade_twitter_image_url_to_orig(p_url))
 
+                    img_urls = _deduplicate_media_urls(img_urls)
                     main_img = img_urls[0] if img_urls else None
+
+                    if len(img_urls) > 1:
+                        elapsed = time.time() - start_t
+                        log_info(f"Twitter Carrossel ({len(img_urls)} fotos) extraido em {elapsed:.2f}s: {clean_title}")
+                        return _build_carousel_metadata(
+                            url=url,
+                            title=clean_title,
+                            uploader=author_str,
+                            media_urls=img_urls,
+                            thumbnail_url=main_img,
+                            raw_info=tweet_data,
+                        )
+
                     qualities = [
                         VideoQualityOption(
                             label=f"🖼️ Imagem Original{dim_tag}",

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Nexus Fetch"
-APP_VERSION = "1.17"
+APP_VERSION = "1.20"
 APP_DESCRIPTION = "Downloader & Conversor Desktop de Alta Performance"
 
 # Resolução da Janela

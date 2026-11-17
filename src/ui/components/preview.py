@@ -346,8 +346,9 @@ class MediaPreviewCard(ctk.CTkFrame):
         self.single_view.pack_forget()
         self.playlist_view.pack(fill="both", expand=True)
 
+        noun_plural = "mídias disponíveis" if metadata.media_type == "carousel" else "vídeos disponíveis"
         self.lbl_pl_title.configure(text=f"📂 {metadata.title}")
-        self.lbl_pl_meta.configure(text=f"👤 {metadata.uploader} • {metadata.playlist_count} vídeos disponíveis")
+        self.lbl_pl_meta.configure(text=f"👤 {metadata.uploader} • {metadata.playlist_count} {noun_plural}")
 
         self.playlist_current_page = 0
         self._render_current_playlist_page()
@@ -377,8 +378,9 @@ class MediaPreviewCard(ctk.CTkFrame):
         page_items = items[start_idx:end_idx]
 
         # Atualiza barra de paginação
+        item_noun = "Mídias" if self.current_metadata.media_type == "carousel" else "Vídeos"
         self.lbl_page_info.configure(
-            text=f"Página {curr_page + 1} de {total_pages} (Vídeos {start_idx + 1} a {end_idx} de {total_items})"
+            text=f"Página {curr_page + 1} de {total_pages} ({item_noun} {start_idx + 1} a {end_idx} de {total_items})"
         )
         self.btn_prev_page.configure(state="normal" if curr_page > 0 else "disabled")
         self.btn_next_page.configure(state="normal" if curr_page < (total_pages - 1) else "disabled")

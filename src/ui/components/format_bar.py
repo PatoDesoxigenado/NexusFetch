@@ -135,11 +135,12 @@ class FormatSelectionBar(ctk.CTkFrame):
         self.video_qualities = metadata.qualities
         self.estimated_audio_bytes = metadata.estimated_audio_size or 0
 
-        if self.media_type == "image":
-            # Caso seja imagem (Twitter photo)
+        if self.media_type in ("image", "carousel"):
+            # Caso seja imagem única ou carrossel (Instagram / Twitter)
             self.current_mode = "image"
-            self.seg_format.configure(values=["🖼️ Imagem (Foto)"])
-            self.seg_format.set("🖼️ Imagem (Foto)")
+            seg_label = "🖼️ Mídia Original (Carrossel)" if self.media_type == "carousel" else "🖼️ Imagem (Foto)"
+            self.seg_format.configure(values=[seg_label])
+            self.seg_format.set(seg_label)
             labels = [q.label for q in metadata.qualities] or ["🖼️ Imagem Original"]
             self.opt_quality.configure(values=labels)
             self.opt_quality.set(labels[0])
