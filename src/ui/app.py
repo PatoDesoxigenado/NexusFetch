@@ -261,13 +261,13 @@ class NexusFetchApp(ctk.CTk):
         # 2. Thread de atualização do aplicativo (dist)
         def app_worker():
             try:
-                from src.utils.updater import check_app_update, download_app_update, is_update_ready, apply_app_update_and_restart
+                from src.utils.updater import check_app_update, download_app_update, is_update_ready
 
                 if is_update_ready():
                     def notify_ready():
                         self.navbar.show_update_button(
                             text="⚡ Reiniciar e Atualizar",
-                            command=apply_app_update_and_restart,
+                            command=self._trigger_in_app_update,
                             fg_color="#059669"
                         )
                     self.run_on_ui(notify_ready)
@@ -290,7 +290,7 @@ class NexusFetchApp(ctk.CTk):
                         def notify_ready_to_restart():
                             self.navbar.show_update_button(
                                 text="⚡ Reiniciar e Atualizar",
-                                command=apply_app_update_and_restart,
+                                command=self._trigger_in_app_update,
                                 fg_color="#059669"
                             )
                         self.run_on_ui(notify_ready_to_restart)
@@ -301,6 +301,45 @@ class NexusFetchApp(ctk.CTk):
                 log_error(f"Erro ao verificar atualização do app: {e}")
 
         threading.Thread(target=app_worker, daemon=True).start()
+
+    def _trigger_in_app_update(self):
+        """
+        Mantém a janela do NexusFetch aberta durante a instalação da atualização,
+        exibe a confirmação com o caminho do novo executável e só então fecha o antigo
+        e abre o novo automaticamente.
+        """
+        from src.utils.updater import apply_app_update_and_restart
+
+        self.navbar.show_update_button(
+            text="⏳ Instalando...",
+            fg_color="#D97706",
+            state="disabled",
+        )
+
+        def on_update_status(msg: str):
+            def update_ui():
+                self.url_bar.show_info(msg)
+                self.action_section.set_status_message(msg)
+                if msg.startswith("✓"):
+                    self.navbar.show_update_button(
+                        text="✓ Atualizado! Reiniciando...",
+                        fg_color="#059669",
+                        state="disabled",
+                    )
+                elif msg.startswith("✖"):
+                    self.navbar.show_update_button(
+                        text="⚡ Tentar Atualizar",
+                        command=self._trigger_in_app_update,
+                        fg_color="#DC2626",
+                        state="normal",
+                    )
+            self.run_on_ui(update_ui)
+
+        threading.Thread(
+            target=apply_app_update_and_restart,
+            kwargs={"on_status": on_update_status, "delay_before_exit": 1.0},
+            daemon=True,
+        ).start()
 
     def _on_module_changed(self, module_key: str):
         self.active_module = module_key

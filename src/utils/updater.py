@@ -8,6 +8,7 @@ import shutil
 import logging
 import zipfile
 import tempfile
+import threading
 import subprocess
 import urllib.request
 from typing import Optional, Tuple, Dict, Callable
@@ -235,10 +236,34 @@ def download_app_update(update_info: Dict, on_progress: Optional[Callable[[float
         return False
 
 def is_update_ready() -> bool:
-    """Verifica se já existe uma atualização completamente baixada e pronta para ser aplicada."""
+    """Verifica se já existe uma atualização válida baixada e pronta para ser aplicada."""
     bin_name = get_current_binary_name()
     ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
-    return os.path.exists(ready_dest) and os.path.getsize(ready_dest) > 20 * 1024 * 1024
+    if not (os.path.exists(ready_dest) and os.path.getsize(ready_dest) > 20 * 1024 * 1024):
+        return False
+
+    if not _is_valid_binary_header(ready_dest, bin_name):
+        try:
+            os.remove(ready_dest)
+        except OSError:
+            pass
+        return False
+
+    # Se o commit do update_info.json já for igual ao installed_commit.json, limpa o .ready obsoleto
+    info_file = os.path.join(UPDATE_DIR, "update_info.json")
+    installed_file = os.path.join(USER_DATA_DIR, "installed_commit.json")
+    if os.path.exists(info_file) and os.path.exists(installed_file):
+        try:
+            with open(info_file, "r", encoding="utf-8") as f_up, open(installed_file, "r", encoding="utf-8") as f_in:
+                up_sha = json.load(f_up).get("sha", "")
+                in_sha = json.load(f_in).get("sha", "")
+            if up_sha and up_sha == in_sha:
+                os.remove(ready_dest)
+                return False
+        except Exception:
+            pass
+
+    return True
 
 
 def _is_valid_binary_header(file_path: str, bin_name: str) -> bool:
@@ -281,246 +306,178 @@ def _build_clean_subprocess_env() -> Dict[str, str]:
     return env
 
 
-def _ps_escape(value: str) -> str:
-    """Escapa aspas simples para uso seguro em literais PowerShell '...'."""
-    return value.replace("'", "''")
-
-
-def _build_windows_updater_script(
+def install_app_update_in_place(
     ready_dest: str,
     target_exe: str,
-    child_pid: int,
-    parent_pid: int,
-    log_file: str,
-) -> str:
-    """Gera o script PowerShell desanexado responsável por aguardar o encerramento completo e reiniciar."""
-    ps_ready = _ps_escape(ready_dest)
-    ps_target = _ps_escape(target_exe)
-    ps_log = _ps_escape(log_file)
-    return f"""$ErrorActionPreference = 'Stop'
-$ReadyDest = '{ps_ready}'
-$TargetExe = '{ps_target}'
-$BackupExe = "$TargetExe.bak"
-$LogFile = '{ps_log}'
-$ChildPid = {child_pid}
-$ParentPid = {parent_pid}
+    on_status: Optional[Callable[[str], None]] = None,
+) -> Tuple[bool, str, str]:
+    """
+    Instala a nova versão com a janela ainda aberta:
+    1. Mantém o executável atual em execução renomeando-o para temporário (.old).
+    2. Move o novo binário (.ready) para o caminho oficial (target_exe).
+    3. Confirma a integridade do novo arquivo no destino e reverte (.old -> target_exe) se algo falhar.
+    Retorna (sucesso, mensagem_ou_caminho_novo, caminho_old_temporario).
+    """
+    bin_name = get_current_binary_name()
+    if not os.path.exists(ready_dest):
+        msg = "Arquivo de atualização (.ready) não encontrado."
+        log_error(msg)
+        return False, msg, ""
 
-function Write-UpdaterLog([string]$Msg) {{
-    try {{
-        $dir = Split-Path -Parent $LogFile
-        if ($dir -and -not (Test-Path -LiteralPath $dir)) {{
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        }}
-        $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        Add-Content -LiteralPath $LogFile -Value "[$ts] $Msg" -Encoding UTF8
-    }} catch {{}}
-}}
+    if not _is_valid_binary_header(ready_dest, bin_name):
+        msg = f"Arquivo de atualização corrompido ou incompatível: {ready_dest}"
+        log_error(msg)
+        try:
+            os.remove(ready_dest)
+        except OSError:
+            pass
+        return False, msg, ""
 
-function Wait-PidExit([int]$TargetPid, [int]$MaxWaitMs) {{
-    $elapsed = 0
-    while ($elapsed -lt $MaxWaitMs) {{
-        $proc = Get-Process -Id $TargetPid -ErrorAction SilentlyContinue
-        if (-not $proc) {{ return $true }}
-        Start-Sleep -Milliseconds 250
-        $elapsed += 250
-    }}
-    return $false
-}}
+    if on_status:
+        on_status("⏳ Instalando atualização... mantendo versão atual como temporária (.old)...")
 
-Write-UpdaterLog "Iniciando atualizacao: ChildPid=$ChildPid ParentPid=$ParentPid Target=$TargetExe"
+    temp_old_exe = f"{target_exe}.old"
+    if os.path.exists(temp_old_exe):
+        try:
+            os.remove(temp_old_exe)
+        except OSError:
+            temp_old_exe = f"{target_exe}.{os.getpid()}.old"
 
-# 1. Aguarda o processo Python filho encerrar
-[void](Wait-PidExit -TargetPid $ChildPid -MaxWaitMs 15000)
+    moved_current_to_old = False
+    try:
+        if sys.platform != "win32":
+            os.chmod(ready_dest, 0o755)
 
-# 2. Se o processo pai for o bootloader do PyInstaller (NexusFetch.exe), aguarda ele limpar _MEI* e liberar o lock
-$parentProc = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue
-if ($parentProc -and $parentProc.ProcessName -like 'NexusFetch*') {{
-    Write-UpdaterLog "Aguardando bootloader PyInstaller (PID=$ParentPid) encerrar..."
-    [void](Wait-PidExit -TargetPid $ParentPid -MaxWaitMs 15000)
-}}
+        if os.path.exists(target_exe):
+            os.replace(target_exe, temp_old_exe)
+            moved_current_to_old = True
+            log_info(f"Versão em execução movida para temporário: {temp_old_exe}")
 
-Start-Sleep -Milliseconds 400
+        shutil.move(ready_dest, target_exe)
+        if sys.platform != "win32":
+            os.chmod(target_exe, 0o755)
 
-if (-not (Test-Path -LiteralPath $ReadyDest)) {{
-    Write-UpdaterLog "ERRO: Arquivo pronto nao encontrado: $ReadyDest"
-    exit 1
-}}
+        if not (os.path.exists(target_exe) and _is_valid_binary_header(target_exe, bin_name)):
+            raise RuntimeError("Falha na verificação de integridade do novo executável após cópia.")
 
-# 3. Backup e substituicao com retry para tolerar locks transitorios de antivirus/SO
-$moved = $false
-for ($i = 1; $i -le 25; $i++) {{
-    try {{
-        if (Test-Path -LiteralPath $TargetExe) {{
-            Move-Item -LiteralPath $TargetExe -Destination $BackupExe -Force
-        }}
-        Move-Item -LiteralPath $ReadyDest -Destination $TargetExe -Force
-        $moved = $true
-        Write-UpdaterLog "Binario substituido com sucesso na tentativa $i."
-        break
-    }} catch {{
-        Write-UpdaterLog "Tentativa $i falhou: $($_.Exception.Message)"
-        if ((-not (Test-Path -LiteralPath $TargetExe)) -and (Test-Path -LiteralPath $BackupExe)) {{
-            try {{ Move-Item -LiteralPath $BackupExe -Destination $TargetExe -Force }} catch {{}}
-        }}
-        Start-Sleep -Milliseconds 400
-    }}
-}}
+        # Registra o SHA instalado somente após confirmar que o novo executável está íntegro no destino
+        info_file = os.path.join(UPDATE_DIR, "update_info.json")
+        if os.path.exists(info_file):
+            try:
+                shutil.copyfile(info_file, os.path.join(USER_DATA_DIR, "installed_commit.json"))
+                os.remove(info_file)
+            except Exception as e:
+                log_warning(f"Não foi possível atualizar installed_commit.json: {e}")
 
-if (-not $moved) {{
-    Write-UpdaterLog "ERRO CRITICO: Nao foi possivel substituir $TargetExe apos 25 tentativas."
-    exit 1
-}}
+        confirm_msg = f"✓ Atualização concluída! Novo executável instalado em: {target_exe}"
+        log_info(confirm_msg)
+        if on_status:
+            on_status(confirm_msg)
+        return True, target_exe, temp_old_exe
 
-if (Test-Path -LiteralPath $BackupExe) {{
-    Remove-Item -LiteralPath $BackupExe -Force -ErrorAction SilentlyContinue
-}}
-
-# 4. Limpa quaisquer variaveis PyInstaller residuais no ambiente antes de relancar
-Get-ChildItem Env: | Where-Object {{ $_.Name -like '_MEI*' -or $_.Name -like '_PYI_*' }} | Remove-Item -ErrorAction SilentlyContinue
-Remove-Item Env:TCL_LIBRARY, Env:TK_LIBRARY, Env:PYTHONHOME, Env:PYTHONPATH -ErrorAction SilentlyContinue
-
-Start-Sleep -Milliseconds 300
-
-try {{
-    $workDir = Split-Path -Parent $TargetExe
-    Start-Process -FilePath $TargetExe -ArgumentList '--updated' -WorkingDirectory $workDir | Out-Null
-    Write-UpdaterLog "Novo processo iniciado com sucesso (--updated)."
-}} catch {{
-    Write-UpdaterLog "ERRO ao iniciar novo processo: $($_.Exception.Message)"
-}}
-
-Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
-"""
+    except Exception as e:
+        log_error(f"Erro durante instalação in-place da atualização: {e}")
+        if moved_current_to_old and (not os.path.exists(target_exe)) and os.path.exists(temp_old_exe):
+            try:
+                os.replace(temp_old_exe, target_exe)
+                log_info("Rollback executado com sucesso: versão original restaurada.")
+            except OSError as rb_err:
+                log_error(f"Falha no rollback do executável: {rb_err}")
+        return False, f"Falha ao instalar atualização: {e}", ""
 
 
-def _apply_windows_update_and_restart(ready_dest: str, target_exe: str) -> bool:
-    """Executa atualização desanexada via PowerShell no Windows e encerra o processo atual."""
-    ps_script = os.path.join(tempfile.gettempdir(), f"nexus_updater_{os.getpid()}_{int(time.time())}.ps1")
-    updater_log = os.path.join(LOG_DIR, "updater.log")
-    script_content = _build_windows_updater_script(
-        ready_dest=ready_dest,
-        target_exe=target_exe,
-        child_pid=os.getpid(),
-        parent_pid=os.getppid(),
-        log_file=updater_log,
-    )
-    with open(ps_script, "w", encoding="utf-8-sig") as f:
-        f.write(script_content)
+def spawn_updated_executable(target_exe: str, temp_old_exe: str = "") -> bool:
+    """Inicia diretamente o novo executável com ambiente limpo (sem scripts intermediários)."""
+    try:
+        clean_env = _build_clean_subprocess_env()
+        work_dir = os.path.dirname(os.path.abspath(target_exe)) or None
+        args = [target_exe, "--updated"]
+        if temp_old_exe:
+            args.append(f"--cleanup-old={temp_old_exe}")
 
-    CREATE_NO_WINDOW = 0x08000000
-    DETACHED_PROCESS = 0x00000008
-    CREATE_NEW_PROCESS_GROUP = 0x00000200
-    env = _build_clean_subprocess_env()
-    ps_exe = os.path.join(
-        os.environ.get("SystemRoot", r"C:\Windows"),
-        "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
-    )
-    if not os.path.exists(ps_exe):
-        ps_exe = "powershell.exe"
+        popen_kwargs = {
+            "cwd": work_dir,
+            "env": clean_env,
+            "close_fds": True,
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+        }
+        if sys.platform != "win32":
+            popen_kwargs["start_new_session"] = True
 
-    log_info(f"Disparando atualizador PowerShell desanexado: {ps_script}")
-    subprocess.Popen(
-        [
-            ps_exe,
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy", "Bypass",
-            "-WindowStyle", "Hidden",
-            "-File", ps_script,
-        ],
-        creationflags=CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
-        env=env,
-        close_fds=True,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+        proc = subprocess.Popen(args, **popen_kwargs)
+        log_info(f"Novo executável iniciado com sucesso (PID={proc.pid}): {target_exe}")
+        return True
+    except Exception as e:
+        log_error(f"Erro ao iniciar novo executável ({target_exe}): {e}")
+        return False
+
+
+def apply_app_update_and_restart(
+    on_status: Optional[Callable[[str], None]] = None,
+    delay_before_exit: float = 0.0,
+) -> bool:
+    """
+    Fluxo seguro em 4 etapas com a janela aberta:
+    1. Mantém a tela aberta e renomeia o executável atual para .old (temporário).
+    2. Instala o novo executável no caminho oficial e valida sua integridade.
+    3. Confirma o sucesso apontando o caminho do novo executável.
+    4. Inicia o novo executável diretamente e encerra o antigo (que é apagado pelo novo ao iniciar).
+    """
+    bin_name = get_current_binary_name()
+    ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
+    target_exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
+
+    ok, result_msg, temp_old_exe = install_app_update_in_place(ready_dest, target_exe, on_status=on_status)
+    if not ok:
+        if on_status:
+            on_status(f"✖ {result_msg}")
+        return False
+
+    if delay_before_exit > 0:
+        time.sleep(delay_before_exit)
+
+    if not spawn_updated_executable(target_exe, temp_old_exe):
+        # Se não conseguiu iniciar o novo, tenta restaurar o antigo para não deixar o usuário na mão
+        if on_status:
+            on_status("✖ Não foi possível iniciar o novo executável automaticamente.")
+        return False
+
     logging.shutdown()
     os._exit(0)
     return True
 
 
-def _apply_linux_update_and_restart(ready_dest: str, target_exe: str) -> bool:
-    """Substitui o binário ELF atomicamente no Linux e relança o processo limpo."""
-    backup_exe = f"{target_exe}.bak"
-    try:
-        os.chmod(ready_dest, 0o755)
-        if os.path.exists(target_exe):
-            shutil.copy2(target_exe, backup_exe)
-        shutil.move(ready_dest, target_exe)
-        if os.path.exists(backup_exe):
-            try:
-                os.remove(backup_exe)
-            except OSError:
-                pass
-
-        env = _build_clean_subprocess_env()
-        log_info(f"Relancando binario Linux atualizado: {target_exe}")
-        subprocess.Popen(
-            [target_exe, "--updated"],
-            env=env,
-            start_new_session=True,
-            close_fds=True,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        logging.shutdown()
-        os._exit(0)
-        return True
-    except Exception as e:
-        log_error(f"Erro ao reiniciar no Linux: {e}")
-        if (not os.path.exists(target_exe)) and os.path.exists(backup_exe):
-            try:
-                shutil.move(backup_exe, target_exe)
-            except OSError:
-                pass
-        return False
-
-
-def apply_app_update_and_restart() -> bool:
-    """Substitui o binário em execução pelo baixado e reinicia a aplicação imediatamente."""
-    bin_name = get_current_binary_name()
-    ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
-
-    if not os.path.exists(ready_dest):
-        log_error("Tentativa de atualizar sem arquivo pronto.")
-        return False
-
-    if not _is_valid_binary_header(ready_dest, bin_name):
-        log_error(f"Arquivo de atualização corrompido ou incompatível: {ready_dest}")
-        try:
-            os.remove(ready_dest)
-        except OSError:
-            pass
-        return False
-
-    # Registra o SHA instalado
-    info_file = os.path.join(UPDATE_DIR, "update_info.json")
-    if os.path.exists(info_file):
-        try:
-            shutil.copyfile(info_file, os.path.join(USER_DATA_DIR, "installed_commit.json"))
-        except Exception as e:
-            log_warning(f"Não foi possível registrar installed_commit.json: {e}")
-
-    target_exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
-    log_info(f"Aplicando atualização: ready={ready_dest} -> target={target_exe}")
-
-    if sys.platform == "win32":
-        return _apply_windows_update_and_restart(ready_dest, target_exe)
-    return _apply_linux_update_and_restart(ready_dest, target_exe)
-
-
-def _cleanup_update_artifacts() -> None:
-    """Remove arquivos temporários residuais após uma atualização bem-sucedida."""
+def _cleanup_update_artifacts(extra_old_path: str = "", max_retries: int = 20, retry_delay: float = 0.4) -> None:
+    """
+    Remove o executável temporário (.old) da versão anterior assim que o processo antigo
+    termina de fechar, além de limpar quaisquer arquivos residuais (.ready, .bak, scripts antigos).
+    """
     bin_name = get_current_binary_name()
     ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
     target_exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
-    candidates = [ready_dest, f"{target_exe}.bak"]
+
+    old_candidates = set(glob.glob(f"{target_exe}*.old"))
+    if extra_old_path:
+        old_candidates.add(extra_old_path)
+
+    for old_path in old_candidates:
+        for _ in range(max_retries):
+            if not os.path.exists(old_path):
+                break
+            try:
+                os.remove(old_path)
+                log_info(f"Versão temporária anterior removida com sucesso: {old_path}")
+                break
+            except OSError:
+                time.sleep(retry_delay)
+
+    other_candidates = [ready_dest, f"{target_exe}.bak"]
     temp_dir = tempfile.gettempdir()
-    candidates.extend(glob.glob(os.path.join(temp_dir, "nexus_updater_*.ps1")))
-    candidates.extend(glob.glob(os.path.join(temp_dir, "nexus_updater_*.bat")))
-    for path in candidates:
+    other_candidates.extend(glob.glob(os.path.join(temp_dir, "nexus_updater_*.ps1")))
+    other_candidates.extend(glob.glob(os.path.join(temp_dir, "nexus_updater_*.bat")))
+    for path in other_candidates:
         if os.path.exists(path):
             try:
                 os.remove(path)
@@ -531,18 +488,27 @@ def _cleanup_update_artifacts() -> None:
 def apply_pending_update_if_any() -> bool:
     """
     Chamado no início de main.py.
-    Se o programa tiver sido fechado anteriormente com um download de update pendente,
-    substitui o executável antes de inicializar a UI e reabre atualizado.
+    NUNCA encerra o aplicativo na abertura (evitando boot-loops).
+    Apenas agenda a limpeza assíncrona dos arquivos temporários (.old / .bak) deixados pela atualização.
     """
-    if "--updated" in sys.argv:
-        log_info("Aplicativo reiniciado com sucesso após atualização (--updated).")
-        _cleanup_update_artifacts()
-        return False
+    extra_old = ""
+    for arg in sys.argv[1:]:
+        if arg.startswith("--cleanup-old="):
+            extra_old = arg.split("=", 1)[1].strip('"').strip("'")
 
-    if is_update_ready():
-        if getattr(sys, "frozen", False):
-            log_info("Atualização pendente detectada na inicialização. Aplicando...")
-            apply_app_update_and_restart()
-            return True
+    if "--updated" in sys.argv or extra_old:
+        log_info("Aplicativo iniciado após atualização (--updated). Agendando limpeza do temporário (.old)...")
+        threading.Thread(
+            target=_cleanup_update_artifacts,
+            kwargs={"extra_old_path": extra_old},
+            daemon=True,
+        ).start()
+    else:
+        # Mesmo em aberturas normais, limpa eventuais .old/.bak destravados em background
+        threading.Thread(
+            target=_cleanup_update_artifacts,
+            kwargs={"max_retries": 2, "retry_delay": 0.1},
+            daemon=True,
+        ).start()
 
     return False

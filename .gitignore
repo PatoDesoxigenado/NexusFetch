@@ -24,6 +24,10 @@ Thumbs.db
 logs/
 *.log
 
-# Test samples
+# Test samples & old versions
 tests/testes_videos_audios/
 testes_videos_audios/
+dist/versões antigas/
+*.old
+*.bak
+*.ready

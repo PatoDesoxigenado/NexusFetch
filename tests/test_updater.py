@@ -2,6 +2,9 @@
 import os
 import sys
 import json
+import time
+import shutil
+import subprocess
 import pytest
 from unittest.mock import patch, MagicMock
 from src.utils.updater import (
@@ -12,9 +15,10 @@ from src.utils.updater import (
     is_update_ready,
     apply_pending_update_if_any,
     apply_app_update_and_restart,
+    install_app_update_in_place,
+    _cleanup_update_artifacts,
     _build_clean_subprocess_env,
     _is_valid_binary_header,
-    _build_windows_updater_script,
 )
 
 def test_get_current_binary_name():
@@ -110,20 +114,47 @@ def test_is_valid_binary_header(tmp_path):
     assert _is_valid_binary_header(str(html_file), "NexusFetch.exe") is False
 
 
-def test_build_windows_updater_script_escapes_and_guards():
-    script = _build_windows_updater_script(
-        ready_dest=r"C:\Users\O'Brien\.nexusfetch\update\NexusFetch.exe.ready",
-        target_exe=r"C:\Apps\Nexus Fetch\NexusFetch.exe",
-        child_pid=1111,
-        parent_pid=2222,
-        log_file=r"C:\Users\O'Brien\.nexusfetch\logs\updater.log",
+def test_install_app_update_in_place_keeps_old_and_confirms(tmp_path):
+    bin_name = get_current_binary_name()
+    magic = b"MZ\x90\x00" if bin_name.endswith(".exe") else b"\x7fELF"
+
+    target_exe = tmp_path / bin_name
+    ready_exe = tmp_path / f"{bin_name}.ready"
+    target_exe.write_bytes(magic + b"OLD_VERSION")
+    ready_exe.write_bytes(magic + b"NEW_VERSION")
+
+    statuses = []
+    ok, result_path, old_path = install_app_update_in_place(
+        ready_dest=str(ready_exe),
+        target_exe=str(target_exe),
+        on_status=lambda m: statuses.append(m),
     )
-    assert "O''Brien" in script
-    assert "$ChildPid = 1111" in script
-    assert "$ParentPid = 2222" in script
-    assert "NexusFetch*" in script
-    assert "$BackupExe" in script
-    assert "Start-Process -FilePath $TargetExe -ArgumentList '--updated'" in script
+    assert ok is True
+    assert result_path == str(target_exe)
+    assert os.path.exists(target_exe)
+    assert target_exe.read_bytes() == magic + b"NEW_VERSION"
+    assert os.path.exists(old_path)
+    assert open(old_path, "rb").read() == magic + b"OLD_VERSION"
+    assert not ready_exe.exists()
+    assert any("✓ Atualização concluída!" in s and str(target_exe) in s for s in statuses)
+
+
+def test_install_app_update_in_place_rollback_on_move_failure(tmp_path):
+    bin_name = get_current_binary_name()
+    magic = b"MZ\x90\x00" if bin_name.endswith(".exe") else b"\x7fELF"
+
+    target_exe = tmp_path / bin_name
+    ready_exe = tmp_path / f"{bin_name}.ready"
+    target_exe.write_bytes(magic + b"SAFE_ORIGINAL")
+    ready_exe.write_bytes(magic + b"BROKEN_MOVE")
+
+    with patch("src.utils.updater.shutil.move", side_effect=OSError("Disk error")):
+        ok, msg, old_path = install_app_update_in_place(str(ready_exe), str(target_exe))
+        assert ok is False
+        assert old_path == ""
+        # Rollback deve ter restaurado o executável original intacto!
+        assert target_exe.exists()
+        assert target_exe.read_bytes() == magic + b"SAFE_ORIGINAL"
 
 
 def test_apply_app_update_rejects_corrupt_ready_file(tmp_path):
@@ -138,33 +169,108 @@ def test_apply_app_update_rejects_corrupt_ready_file(tmp_path):
         assert not ready_file.exists()
 
 
-def test_apply_app_update_spawns_clean_powershell_on_windows(tmp_path):
-    if sys.platform != "win32":
-        pytest.skip("Teste específico de spawn Windows")
-
+def test_apply_app_update_swaps_in_place_and_spawns_new_binary_directly(tmp_path):
     update_dir = tmp_path / "update"
     user_dir = tmp_path / "user"
-    log_dir = tmp_path / "logs"
+    app_dir = tmp_path / "app"
     update_dir.mkdir()
     user_dir.mkdir()
-    log_dir.mkdir()
+    app_dir.mkdir()
 
-    ready_file = update_dir / "NexusFetch.exe.ready"
-    ready_file.write_bytes(b"MZ\x90\x00" + b"\x00" * 1024)
+    bin_name = get_current_binary_name()
+    magic = b"MZ\x90\x00" if bin_name.endswith(".exe") else b"\x7fELF"
+    target_exe = app_dir / bin_name
+    ready_file = update_dir / f"{bin_name}.ready"
+    target_exe.write_bytes(magic + b"OLD_BIN")
+    ready_file.write_bytes(magic + b"NEW_BIN")
+
+    mock_proc = MagicMock()
+    mock_proc.pid = 4242
 
     with (
         patch("src.utils.updater.UPDATE_DIR", str(update_dir)),
         patch("src.utils.updater.USER_DATA_DIR", str(user_dir)),
-        patch("src.utils.updater.LOG_DIR", str(log_dir)),
-        patch("src.utils.updater.subprocess.Popen") as mock_popen,
+        patch.object(sys, "frozen", True, create=True),
+        patch.object(sys, "executable", str(target_exe)),
+        patch("src.utils.updater.subprocess.Popen", return_value=mock_proc) as mock_popen,
         patch("src.utils.updater.os._exit") as mock_exit,
-        patch.dict(os.environ, {"_MEIPASS2": r"C:\Temp\_MEI999", "SYSTEMROOT": r"C:\Windows"}, clear=False),
+        patch.dict(os.environ, {"_MEIPASS2": r"C:\Temp\_MEI999"}, clear=False),
     ):
         apply_app_update_and_restart()
         assert mock_popen.called
         cmd, kwargs = mock_popen.call_args[0][0], mock_popen.call_args[1]
-        assert cmd[0].lower().endswith("powershell.exe")
-        assert "-ExecutionPolicy" in cmd
-        assert "Bypass" in cmd
+        assert cmd[0] == str(target_exe)
+        assert "--updated" in cmd
+        assert any(arg.startswith("--cleanup-old=") for arg in cmd)
         assert "_MEIPASS2" not in kwargs["env"]
-        assert mock_exit.called_with(0) or mock_exit.call_args[0] == (0,)
+        assert target_exe.read_bytes() == magic + b"NEW_BIN"
+        assert (app_dir / f"{bin_name}.old").read_bytes() == magic + b"OLD_BIN"
+        assert mock_exit.call_args[0] == (0,)
+
+
+def test_apply_pending_update_never_exits_on_startup(tmp_path):
+    """Garante que apply_pending_update_if_any NUNCA fecha o app na inicialização (zero boot-loop)."""
+    update_dir = tmp_path / "update"
+    update_dir.mkdir()
+    bin_name = get_current_binary_name()
+    magic = b"MZ\x90\x00" if bin_name.endswith(".exe") else b"\x7fELF"
+    ready_file = update_dir / f"{bin_name}.ready"
+    ready_file.write_bytes(magic + b"\x00" * (21 * 1024 * 1024))
+
+    with (
+        patch("src.utils.updater.UPDATE_DIR", str(update_dir)),
+        patch.object(sys, "frozen", True, create=True),
+        patch("src.utils.updater.os._exit") as mock_exit,
+    ):
+        assert apply_pending_update_if_any() is False
+        assert not mock_exit.called
+
+
+def test_live_running_exe_in_place_update_and_cleanup(tmp_path):
+    """
+    Teste real de integração no Windows:
+    1. Inicia um executável real em execução (janela/processo aberto).
+    2. Enquanto o processo antigo está ABERTO, executa install_app_update_in_place
+       (renomeando o atual em execução para .old e colocando o novo no lugar).
+    3. Inicia o novo executável diretamente e encerra o antigo.
+    4. Executa _cleanup_update_artifacts e comprova que o .old é apagado e o novo permanece.
+    """
+    if sys.platform != "win32":
+        pytest.skip("Teste de processo PE em execução específico para Windows")
+
+    ping_src = r"C:\Windows\System32\ping.exe"
+    target_exe = tmp_path / "NexusFetch.exe"
+    ready_exe = tmp_path / "NexusFetch.exe.ready"
+    shutil.copy2(ping_src, target_exe)
+    shutil.copy2(ping_src, ready_exe)
+
+    old_proc = subprocess.Popen(
+        [str(target_exe), "127.0.0.1", "-n", "10"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        time.sleep(0.3)
+        assert old_proc.poll() is None, "Processo antigo deveria estar em execução"
+
+        statuses = []
+        ok, new_path, old_path = install_app_update_in_place(
+            ready_dest=str(ready_exe),
+            target_exe=str(target_exe),
+            on_status=lambda s: statuses.append(s),
+        )
+        assert ok is True
+        assert os.path.exists(new_path)
+        assert os.path.exists(old_path)
+        assert not ready_exe.exists()
+
+        # Agora encerra o processo antigo e limpa o .old
+        old_proc.terminate()
+        old_proc.wait(timeout=5)
+
+        _cleanup_update_artifacts(extra_old_path=old_path, max_retries=10, retry_delay=0.2)
+        assert not os.path.exists(old_path), "O arquivo temporário .old deveria ter sido apagado"
+        assert os.path.exists(target_exe), "O novo executável deve continuar intacto"
+    finally:
+        if old_proc.poll() is None:
+            old_proc.kill()

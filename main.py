@@ -13,11 +13,10 @@ if os.path.exists(USER_PACKAGES_DIR) and USER_PACKAGES_DIR not in sys.path:
     sys.path.insert(0, USER_PACKAGES_DIR)
 
 def main():
-    # Verifica e aplica atualizações pendentes do aplicativo se houver
+    # Limpa artefatos residuais (.old / .bak) de atualizações anteriores em background (nunca bloqueia a abertura!)
     try:
         from src.utils.updater import apply_pending_update_if_any
-        if apply_pending_update_if_any():
-            sys.exit(0)
+        apply_pending_update_if_any()
     except Exception:
         pass
 

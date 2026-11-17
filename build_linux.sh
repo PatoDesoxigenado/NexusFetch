@@ -59,9 +59,10 @@ echo "[2/4] Diretório de Assets: $ASSETS_DIR"
 echo "[2/4] Diretório do CustomTkinter: $CTK_DIR"
 
 echo "[3/4] Executando PyInstaller para Linux..."
-WORK_DIR="$SCRIPT_DIR/build/linux"
-rm -rf "$WORK_DIR"
-mkdir -p "$WORK_DIR"
+WORK_DIR="/tmp/nexus_build_linux"
+DIST_TMP="/tmp/nexus_dist_linux"
+rm -rf "$WORK_DIR" "$DIST_TMP"
+mkdir -p "$WORK_DIR" "$DIST_TMP" "$SCRIPT_DIR/dist"
 
 "$PYTHON_EXEC" -m PyInstaller main.py \
     --name="NexusFetch" \
@@ -69,6 +70,7 @@ mkdir -p "$WORK_DIR"
     --onefile \
     --workpath="$WORK_DIR" \
     --specpath="$WORK_DIR" \
+    --distpath="$DIST_TMP" \
     --icon="$ICON_PNG" \
     --add-data="$ASSETS_DIR:assets" \
     --add-data="$CTK_DIR:customtkinter" \
@@ -81,6 +83,8 @@ mkdir -p "$WORK_DIR"
     --hidden-import="PIL.ImageTk" \
     --clean \
     -y
+
+cp -f "$DIST_TMP/NexusFetch" "$SCRIPT_DIR/dist/NexusFetch"
 
 if [ -f "$SCRIPT_DIR/dist/NexusFetch" ]; then
     chmod +x "$SCRIPT_DIR/dist/NexusFetch"
