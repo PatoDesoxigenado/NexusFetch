@@ -4,9 +4,12 @@ import sys
 import logging
 from logging.handlers import RotatingFileHandler
 
-# Diretório de logs dentro do projeto
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+# Diretório de logs persistente (~/.nexusfetch/logs quando empacotado, ou ./logs em dev)
+if getattr(sys, "frozen", False):
+    LOG_DIR = os.path.join(os.path.expanduser("~"), ".nexusfetch", "logs")
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "nexus_debug.log")
 
