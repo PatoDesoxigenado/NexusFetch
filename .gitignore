@@ -31,3 +31,6 @@ dist/versões antigas/
 *.old
 *.bak
 *.ready
+gpg_pass.bat
+nexus_popup_*
+nexus_updater_*

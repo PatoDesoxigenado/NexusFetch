@@ -386,6 +386,156 @@ def install_app_update_in_place(
         return False, f"Falha ao instalar atualização: {e}", ""
 
 
+def _build_windows_progress_popup_script(temp_old_exe: str) -> str:
+    """
+    Gera script PowerShell (.NET WinForms nativo do Windows) que exibe um pop-up centralizado
+    com barra de progresso em loop (Marquee) e fecha automaticamente assim que o arquivo .old é apagado.
+    """
+    ps_old = temp_old_exe.replace("'", "''")
+    return f"""Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+$oldPath = '{ps_old}'
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = 'Nexus Fetch — Atualização'
+$form.Size = New-Object System.Drawing.Size(430, 150)
+$form.StartPosition = 'CenterScreen'
+$form.FormBorderStyle = 'FixedDialog'
+$form.MaximizeBox = $false
+$form.MinimizeBox = $false
+$form.ControlBox = $false
+$form.TopMost = $true
+$form.BackColor = [System.Drawing.Color]::FromArgb(24, 24, 28)
+
+$lbl = New-Object System.Windows.Forms.Label
+$lbl.Text = 'Atualização em andamento, aguarde...'
+$lbl.ForeColor = [System.Drawing.Color]::White
+$lbl.Font = New-Object System.Drawing.Font('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+$lbl.AutoSize = $false
+$lbl.Size = New-Object System.Drawing.Size(390, 26)
+$lbl.Location = New-Object System.Drawing.Point(20, 18)
+$form.Controls.Add($lbl)
+
+$sub = New-Object System.Windows.Forms.Label
+$sub.Text = 'Finalizando instalação e abrindo a nova versão...'
+$sub.ForeColor = [System.Drawing.Color]::FromArgb(185, 185, 195)
+$sub.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+$sub.AutoSize = $false
+$sub.Size = New-Object System.Drawing.Size(390, 22)
+$sub.Location = New-Object System.Drawing.Point(20, 46)
+$form.Controls.Add($sub)
+
+$bar = New-Object System.Windows.Forms.ProgressBar
+$bar.Style = 'Marquee'
+$bar.MarqueeAnimationSpeed = 22
+$bar.Size = New-Object System.Drawing.Size(375, 22)
+$bar.Location = New-Object System.Drawing.Point(20, 76)
+$form.Controls.Add($bar)
+
+$script:elapsed = 0
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 150
+$timer.Add_Tick({{
+    $script:elapsed += 150
+    if ((-not (Test-Path -LiteralPath $oldPath)) -or ($script:elapsed -ge 25000)) {{
+        $timer.Stop()
+        $form.Close()
+    }}
+}})
+$timer.Start()
+[void]$form.ShowDialog()
+Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
+"""
+
+
+def _build_linux_progress_popup_script(temp_old_exe: str) -> str:
+    """
+    Gera script shell nativo para Linux (zenity / yad / kdialog) com barra pulsante
+    que fecha automaticamente assim que o arquivo .old for apagado.
+    """
+    sh_old = temp_old_exe.replace("'", "'\\''")
+    return f"""#!/usr/bin/env bash
+OLD_PATH='{sh_old}'
+if command -v zenity >/dev/null 2>&1; then
+    (
+        elapsed=0
+        while [ -e "$OLD_PATH" ] && [ $elapsed -lt 250 ]; do
+            echo "# Atualização em andamento, aguarde..."
+            sleep 0.1
+            elapsed=$((elapsed + 1))
+        done
+        echo "100"
+    ) | zenity --progress --pulsate --no-cancel --auto-close --width=380 --title="Nexus Fetch" --text="Atualização em andamento, aguarde..." >/dev/null 2>&1
+elif command -v yad >/dev/null 2>&1; then
+    (
+        elapsed=0
+        while [ -e "$OLD_PATH" ] && [ $elapsed -lt 250 ]; do
+            echo "# Atualização em andamento, aguarde..."
+            sleep 0.1
+            elapsed=$((elapsed + 1))
+        done
+        echo "100"
+    ) | yad --progress --pulsate --no-buttons --auto-close --width=380 --title="Nexus Fetch" --text="Atualização em andamento, aguarde..." >/dev/null 2>&1
+fi
+rm -f "$0"
+"""
+
+
+def spawn_update_progress_popup(temp_old_exe: str) -> bool:
+    """
+    Dispara o pop-up visual nativo do SO ("Atualização em andamento, aguarde...") com barra em loop,
+    que permanece na tela durante a transição e fecha sozinho quando o .old é apagado.
+    """
+    if not temp_old_exe:
+        return False
+    try:
+        clean_env = _build_clean_subprocess_env()
+        temp_dir = tempfile.gettempdir()
+        if sys.platform == "win32":
+            ps_script = os.path.join(temp_dir, f"nexus_popup_{os.getpid()}_{int(time.time())}.ps1")
+            with open(ps_script, "w", encoding="utf-8-sig") as f:
+                f.write(_build_windows_progress_popup_script(temp_old_exe))
+
+            ps_exe = os.path.join(
+                os.environ.get("SystemRoot", r"C:\Windows"),
+                "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
+            )
+            if not os.path.exists(ps_exe):
+                ps_exe = "powershell.exe"
+
+            CREATE_NO_WINDOW = 0x08000000
+            subprocess.Popen(
+                [ps_exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps_script],
+                creationflags=CREATE_NO_WINDOW,
+                env=clean_env,
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            sh_script = os.path.join(temp_dir, f"nexus_popup_{os.getpid()}_{int(time.time())}.sh")
+            with open(sh_script, "w", encoding="utf-8") as f:
+                f.write(_build_linux_progress_popup_script(temp_old_exe))
+            os.chmod(sh_script, 0o755)
+            subprocess.Popen(
+                ["/bin/bash", sh_script],
+                env=clean_env,
+                start_new_session=True,
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        log_info(f"Pop-up visual de progresso da atualização iniciado (monitorando: {temp_old_exe})")
+        return True
+    except Exception as e:
+        log_warning(f"Não foi possível exibir pop-up visual de transição: {e}")
+        return False
+
+
 def spawn_updated_executable(target_exe: str, temp_old_exe: str = "") -> bool:
     """Inicia diretamente o novo executável com ambiente limpo (sem scripts intermediários)."""
     try:
@@ -419,11 +569,12 @@ def apply_app_update_and_restart(
     delay_before_exit: float = 0.0,
 ) -> bool:
     """
-    Fluxo seguro em 4 etapas com a janela aberta:
+    Fluxo seguro em 4 etapas com a janela aberta + pop-up de transição:
     1. Mantém a tela aberta e renomeia o executável atual para .old (temporário).
     2. Instala o novo executável no caminho oficial e valida sua integridade.
     3. Confirma o sucesso apontando o caminho do novo executável.
-    4. Inicia o novo executável diretamente e encerra o antigo (que é apagado pelo novo ao iniciar).
+    4. Abre o pop-up visual ("Atualização em andamento, aguarde...") que monitora o .old,
+       inicia o novo executável diretamente e encerra o antigo (assim que o novo apaga o .old, o pop-up fecha).
     """
     bin_name = get_current_binary_name()
     ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
@@ -438,8 +589,11 @@ def apply_app_update_and_restart(
     if delay_before_exit > 0:
         time.sleep(delay_before_exit)
 
+    # Dispara o pop-up visual nativo do SO que fecha sozinho assim que temp_old_exe for apagado
+    spawn_update_progress_popup(temp_old_exe)
+    time.sleep(0.35)
+
     if not spawn_updated_executable(target_exe, temp_old_exe):
-        # Se não conseguiu iniciar o novo, tenta restaurar o antigo para não deixar o usuário na mão
         if on_status:
             on_status("✖ Não foi possível iniciar o novo executável automaticamente.")
         return False
@@ -449,11 +603,19 @@ def apply_app_update_and_restart(
     return True
 
 
-def _cleanup_update_artifacts(extra_old_path: str = "", max_retries: int = 20, retry_delay: float = 0.4) -> None:
+def _cleanup_update_artifacts(
+    extra_old_path: str = "",
+    max_retries: int = 20,
+    retry_delay: float = 0.4,
+    initial_delay: float = 0.0,
+) -> None:
     """
     Remove o executável temporário (.old) da versão anterior assim que o processo antigo
     termina de fechar, além de limpar quaisquer arquivos residuais (.ready, .bak, scripts antigos).
     """
+    if initial_delay > 0:
+        time.sleep(initial_delay)
+
     bin_name = get_current_binary_name()
     ready_dest = os.path.join(UPDATE_DIR, f"{bin_name}.ready")
     target_exe = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
@@ -500,7 +662,7 @@ def apply_pending_update_if_any() -> bool:
         log_info("Aplicativo iniciado após atualização (--updated). Agendando limpeza do temporário (.old)...")
         threading.Thread(
             target=_cleanup_update_artifacts,
-            kwargs={"extra_old_path": extra_old},
+            kwargs={"extra_old_path": extra_old, "initial_delay": 1.2},
             daemon=True,
         ).start()
     else:

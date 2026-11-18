@@ -34,8 +34,8 @@ O **NexusFetch** é um aplicativo portátil (*standalone*). Você não precisa i
 4. **Escolha o formato e a qualidade desejada:**
    - **Vídeo (MP4):** De 360p até 4K UHD (2160p).
    - **Áudio (MP3):** Conversão em altíssima fidelidade (320 kbps).
-   - **Playlists do YouTube:** Selecione individualmente os vídeos que quer baixar com as caixas de seleção ou use os botões *Marcar Todos* / *Desmarcar Todos*.
-   - **Imagens / GIFs:** Baixe fotos originais ou salve GIFs diretamente em formato `.gif`.
+   - **Playlists e Carrosséis (YouTube, Instagram e Twitter/X):** Selecione individualmente os vídeos ou imagens que quer baixar com as caixas de seleção ou use os botões *Marcar Todos* / *Desmarcar Todos*.
+   - **Imagens / GIFs:** Baixe fotos em resolução original máxima (até 4K no X/Twitter e sem recorte no Instagram) ou salve GIFs diretamente em formato `.gif`.
 5. Clique em **Baixar**! O arquivo será salvo diretamente na sua pasta de **Downloads**.
 
 ### 🔄 2. Converter Mídias Locais (Aba Exclusiva "Conversor")
@@ -89,11 +89,15 @@ O **NexusFetch** nasceu para ser uma **alternativa definitiva, transparente e é
   - Conversão para MP3 em 320 kbps com tags ID3.
   - Gerenciamento de playlists com paginação (30 itens por página), seleção em lote e organização automática em subpastas numeradas.
 - **Instagram:**
-  - Extração e download de fotos em resolução máxima original (`.jpg`).
+  - Extração e download de fotos em resolução máxima original (`.jpg`) sem recorte e sem duplicatas.
+  - Suporte a **carrosséis seletivos**: escolha individualmente quais imagens/vídeos baixar de uma postagem.
   - Download de Reels e vídeos em alta resolução (`.mp4`).
 - **Twitter / X:**
-  - Download de fotos em qualidade original.
+  - Download de fotos em resolução original máxima (`?name=orig`, incluindo imagens 4K) com suporte a **carrosséis seletivos**.
   - Download de vídeos e conversão nativa de animações para `.gif` (paleta otimizada de 256 cores).
+- **Tema Claro / Escuro & Auto-Updater:**
+  - Alternância nativa entre Modo Claro e Modo Escuro com logos oficiais em alta resolução.
+  - Atualizador automático em segundo plano com instalação segura in-place, rollback automático e pop-up visual de transição.
 - **Telemetria Suavizada:**
   - Cálculo de velocidade e tempo restante (ETA) com média móvel exponencial para eliminar picos falsos e exibir a velocidade real da sua rede.
 

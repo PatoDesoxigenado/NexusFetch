@@ -16,6 +16,9 @@ from src.utils.updater import (
     apply_pending_update_if_any,
     apply_app_update_and_restart,
     install_app_update_in_place,
+    spawn_update_progress_popup,
+    _build_windows_progress_popup_script,
+    _build_linux_progress_popup_script,
     _cleanup_update_artifacts,
     _build_clean_subprocess_env,
     _is_valid_binary_header,
@@ -197,7 +200,8 @@ def test_apply_app_update_swaps_in_place_and_spawns_new_binary_directly(tmp_path
         patch.dict(os.environ, {"_MEIPASS2": r"C:\Temp\_MEI999"}, clear=False),
     ):
         apply_app_update_and_restart()
-        assert mock_popen.called
+        assert mock_popen.call_count >= 1
+        # A última chamada de Popen é o novo executável direto (a anterior é o pop-up visual)
         cmd, kwargs = mock_popen.call_args[0][0], mock_popen.call_args[1]
         assert cmd[0] == str(target_exe)
         assert "--updated" in cmd
@@ -206,6 +210,18 @@ def test_apply_app_update_swaps_in_place_and_spawns_new_binary_directly(tmp_path
         assert target_exe.read_bytes() == magic + b"NEW_BIN"
         assert (app_dir / f"{bin_name}.old").read_bytes() == magic + b"OLD_BIN"
         assert mock_exit.call_args[0] == (0,)
+
+
+def test_popup_scripts_content():
+    win_s = _build_windows_progress_popup_script(r"C:\Apps\O'Brien\NexusFetch.exe.old")
+    assert "Atualização em andamento, aguarde..." in win_s
+    assert "Marquee" in win_s
+    assert "O''Brien" in win_s
+
+    lin_s = _build_linux_progress_popup_script("/opt/nexus/NexusFetch.old")
+    assert "Atualização em andamento, aguarde..." in lin_s
+    assert "--pulsate" in lin_s
+    assert "/opt/nexus/NexusFetch.old" in lin_s
 
 
 def test_apply_pending_update_never_exits_on_startup(tmp_path):
