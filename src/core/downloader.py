@@ -1,5 +1,6 @@
 """Gerenciador de download assíncrono para Vídeos, Áudios, GIFs e Imagens."""
 import os
+import re
 import sys
 import time
 import shutil
@@ -50,6 +51,12 @@ class MediaDownloader:
     def cancel(self):
         """Sinaliza para cancelar o download em andamento."""
         self._is_cancelled = True
+
+    @staticmethod
+    def _apply_twitter_single_item_filter(url: str, ydl_opts: dict) -> None:
+        """Restringe downloads do Twitter/X ao primeiro item (tweet principal), ignorando vídeos de tweets citados (quote)."""
+        if re.search(r'(?:twitter\.com|x\.com)/', url, re.IGNORECASE):
+            ydl_opts["playlist_items"] = "1"
 
     @staticmethod
     def _infer_extension(media_url: str, item_type: str = "image") -> str:
@@ -375,6 +382,7 @@ class MediaDownloader:
                     "no_warnings": True,
                     "format": "best",
                 }
+                self._apply_twitter_single_item_filter(url, ydl_opts_gif)
                 if ffmpeg_location:
                     ydl_opts_gif["ffmpeg_location"] = ffmpeg_location
 
@@ -472,6 +480,7 @@ class MediaDownloader:
             "nocheckcertificate": True,
             "windowsfilenames": True,
         }
+        self._apply_twitter_single_item_filter(url, ydl_opts)
 
         if ffmpeg_location:
             ydl_opts["ffmpeg_location"] = ffmpeg_location

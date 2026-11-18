@@ -642,8 +642,12 @@ def extract_media_info(url: str) -> MediaMetadata:
                     error="Não foi possível obter dados para este link."
                 )
 
-            # Caso detecte que o retorno é uma playlist de múltiplos vídeos
-            if info.get("_type") == "playlist" or ("entries" in info and len(list(info.get("entries") or [])) > 0):
+            # Em tweets que citam outro tweet (quote), o yt-dlp retorna _type == "playlist" com ambos os vídeos:
+            # seleciona apenas o primeiro entry (mídia do tweet principal) em vez de tratar como playlist.
+            entries = list(info.get("entries") or [])
+            if is_twitter and entries:
+                info = entries[0]
+            elif info.get("_type") == "playlist" or len(entries) > 0:
                 return _process_playlist_info(url, info, start_t)
 
             title = info.get("title") or "Sem título"

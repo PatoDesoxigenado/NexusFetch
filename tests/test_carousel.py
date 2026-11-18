@@ -136,3 +136,48 @@ def test_upgrade_twitter_image_url_to_orig():
     # Não altera URLs que não são pbs.twimg.com/media
     other = "https://scontent.cdninstagram.com/v/photo.jpg?stp=dst-jpg"
     assert _upgrade_twitter_image_url_to_orig(other) == other
+
+
+def test_twitter_quoted_tweet_restricts_to_primary_video(tmp_path):
+    opts_x = {}
+    MediaDownloader._apply_twitter_single_item_filter(
+        "https://x.com/JaeGamez/status/2122751628767903750", opts_x
+    )
+    assert opts_x.get("playlist_items") == "1"
+
+    opts_yt = {}
+    MediaDownloader._apply_twitter_single_item_filter(
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ", opts_yt
+    )
+    assert "playlist_items" not in opts_yt
+
+    captured_opts = {}
+
+    class FakeYDL:
+        def __init__(self, opts):
+            captured_opts.update(opts)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def extract_info(self, url, download=False):
+            return {"title": "Main Tweet Video"}
+
+    dl = MediaDownloader()
+    completed = []
+    with patch("src.core.downloader.yt_dlp.YoutubeDL", FakeYDL):
+        dl.download_async(
+            url="https://x.com/JaeGamez/status/2122751628767903750",
+            output_dir=str(tmp_path),
+            mode="video",
+            media_type="video",
+            title="Main Tweet Video",
+            on_complete=lambda ok, msg, p: completed.append((ok, msg, p)),
+        )
+        dl._current_thread.join(timeout=5)
+
+    assert completed[0][0] is True
+    assert captured_opts.get("playlist_items") == "1"
