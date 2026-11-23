@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "Nexus Fetch"
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 APP_DESCRIPTION = "Downloader & Conversor Desktop de Alta Performance"
 
 # Resolução da Janela
@@ -20,6 +20,7 @@ MODULE_TWITTER = "twitter"
 MODULE_CONVERTER = "converter"
 MODULE_COMPRESSOR = "compressor"
 MODULE_MULTI_DOWNLOAD = "multi_download"
+MODULE_TRIMMER = "trimmer"
 
 MODULES = {
     MODULE_YOUTUBE: {"label": "YouTube", "icon": "▶"},

@@ -461,7 +461,7 @@ class ConverterView(ctk.CTkFrame):
                 import windnd
                 def on_drop(files):
                     active_mod = getattr(self.app, "active_module", "")
-                    if active_mod not in ("converter", "compressor"):
+                    if active_mod not in ("converter", "compressor", "trimmer"):
                         return
 
                     file_paths = []
@@ -479,6 +479,8 @@ class ConverterView(ctk.CTkFrame):
                         self.app.run_on_ui(self._add_files_from_paths, file_paths)
                     elif active_mod == "compressor" and hasattr(self.app, "compressor_view"):
                         self.app.run_on_ui(self.app.compressor_view.add_files, file_paths)
+                    elif active_mod == "trimmer" and hasattr(self.app, "trimmer_view"):
+                        self.app.run_on_ui(self.app.trimmer_view.load_dropped_files, file_paths)
 
                 # Hook na janela principal com force_unicode=True para suporte a caracteres especiais
                 windnd.hook_dropfiles(self.app, func=on_drop, force_unicode=True)

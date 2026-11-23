@@ -15,6 +15,7 @@ from src.config import (
     MODULE_CONVERTER,
     MODULE_COMPRESSOR,
     MODULE_MULTI_DOWNLOAD,
+    MODULE_TRIMMER,
     LOGO_YOUTUBE_PATH,
     LOGO_INSTAGRAM_PATH,
     LOGO_TWITTER_PATH,
@@ -217,6 +218,7 @@ class NavBar(ctk.CTkFrame):
         items = [
             ("📦  Compressor (Discord / WhatsApp)", lambda: self._select_from_menu(MODULE_COMPRESSOR), self.current_module == MODULE_COMPRESSOR),
             ("📋  Multi-Download (Fila de Links)", lambda: self._select_from_menu(MODULE_MULTI_DOWNLOAD), self.current_module == MODULE_MULTI_DOWNLOAD),
+            ("✂️  Recorte Rápido (Trim / Clip)", lambda: self._select_from_menu(MODULE_TRIMMER), self.current_module == MODULE_TRIMMER),
         ]
 
         for text, cmd, is_active in items:
@@ -371,7 +373,7 @@ class NavBar(ctk.CTkFrame):
                     )
 
         if hasattr(self, "btn_more"):
-            is_extra_active = self.current_module in (MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD)
+            is_extra_active = self.current_module in (MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD, MODULE_TRIMMER)
             if is_extra_active:
                 self.btn_more.configure(
                     fg_color=Theme.PRIMARY,

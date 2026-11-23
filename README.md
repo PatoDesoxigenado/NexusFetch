@@ -4,7 +4,7 @@
 > **Converta suas mídias com máxima qualidade e aceleração local nativa via FFmpeg.**  
 > Sem anúncios invasivos, sem pop-ups, sem redirecionamentos suspeitos e sem vírus.
 
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.4-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen.svg)](https://www.python.org/)
 [![Plataformas](https://img.shields.io/badge/plataformas-Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
@@ -47,6 +47,11 @@ O **NexusFetch** é um aplicativo portátil (*standalone*). Você não precisa i
    - **Extrair Áudio:** Converta qualquer vídeo para MP3 com taxa de bits máxima (320 kbps).
    - **Conversor de Áudio:** Converta entre MP3, WAV, FLAC, M4A, OGG e OPUS sem perdas.
 4. Clique em **⚡ Converter Arquivos**! A conversão ocorre em lote, de forma segura, com gravação atômica temporária para garantir zero arquivos corrompidos.
+
+### ☰ 3. Menu "Mais Opções" (Compressor, Multi-Download e Recorte Rápido)
+- **📦 Compressor (Discord / WhatsApp):** reduz vídeos e áudios grandes para os limites de envio (10 MB, 16 MB, 50 MB, 64 MB) com aceleração por GPU (NVENC/QuickSync/AMF) e Drag & Drop em lote.
+- **📋 Multi-Download (Fila de Links):** baixe até 10 links em sequência com validação prévia, reordenação e formato individual por item.
+- **✂️ Recorte Rápido (Trim / Clip):** recorte apenas o trecho desejado de links (YouTube até 4K, Twitter/X, Instagram) **sem baixar o vídeo inteiro**, ou corte arquivos locais instantaneamente sem perda de qualidade.
 
 > 🛠️ **E o FFmpeg?**  
 > O programa verifica automaticamente se o FFmpeg está instalado. Se não estiver, **ele oferece um botão de 1 clique que baixa e configura tudo sozinho**, sem você precisar abrir navegador nem mexer em configurações do sistema!

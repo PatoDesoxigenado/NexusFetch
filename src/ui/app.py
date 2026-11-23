@@ -17,6 +17,7 @@ from src.config import (
     MODULE_CONVERTER,
     MODULE_COMPRESSOR,
     MODULE_MULTI_DOWNLOAD,
+    MODULE_TRIMMER,
     ICON_ICO_PATH,
     ICON_PNG_PATH,
 )
@@ -30,6 +31,7 @@ from src.ui.components.diag_modal import DiagnosticModal
 from src.ui.components.converter_view import ConverterView
 from src.ui.components.compressor_view import CompressorView
 from src.ui.components.multi_download_view import MultiDownloadView
+from src.ui.components.trimmer_view import TrimmerView
 
 from src.utils.diagnostics import run_startup_diagnostics, DiagnosticResult
 from src.core.metadata import extract_media_info, MediaMetadata, clear_thumbnail_cache
@@ -237,6 +239,12 @@ class NexusFetchApp(ctk.CTk):
             app_instance=self
         )
 
+        # 3.8 Visão de Recorte Rápido / Trim & Clip (Inicialmente oculta)
+        self.trimmer_view = TrimmerView(
+            self.scroll_area,
+            app_instance=self
+        )
+
     def _add_badge(self, parent, text: str):
         badge = ctk.CTkFrame(
             parent,
@@ -372,8 +380,9 @@ class NexusFetchApp(ctk.CTk):
         self.converter_view.pack_forget()
         self.compressor_view.pack_forget()
         self.multi_download_view.pack_forget()
+        self.trimmer_view.pack_forget()
 
-        if module_key in (MODULE_CONVERTER, MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD):
+        if module_key in (MODULE_CONVERTER, MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD, MODULE_TRIMMER):
             # Oculta interface do Downloader principal
             self.url_bar.pack_forget()
             self.welcome_card.pack_forget()
@@ -385,8 +394,10 @@ class NexusFetchApp(ctk.CTk):
                 self.converter_view.pack(fill="both", expand=True)
             elif module_key == MODULE_COMPRESSOR:
                 self.compressor_view.pack(fill="both", expand=True)
-            else:
+            elif module_key == MODULE_MULTI_DOWNLOAD:
                 self.multi_download_view.pack(fill="both", expand=True)
+            else:
+                self.trimmer_view.pack(fill="both", expand=True)
         else:
             # Restaura interface do Downloader
             self.action_section.pack(side="bottom", fill="x", pady=(12, 0))
