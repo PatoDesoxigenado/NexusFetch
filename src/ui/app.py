@@ -15,6 +15,8 @@ from src.config import (
     WINDOW_MIN_HEIGHT,
     MODULE_YOUTUBE,
     MODULE_CONVERTER,
+    MODULE_COMPRESSOR,
+    MODULE_MULTI_DOWNLOAD,
     ICON_ICO_PATH,
     ICON_PNG_PATH,
 )
@@ -26,17 +28,22 @@ from src.ui.components.format_bar import FormatSelectionBar
 from src.ui.components.progress import DownloadActionSection
 from src.ui.components.diag_modal import DiagnosticModal
 from src.ui.components.converter_view import ConverterView
+from src.ui.components.compressor_view import CompressorView
+from src.ui.components.multi_download_view import MultiDownloadView
 
 from src.utils.diagnostics import run_startup_diagnostics, DiagnosticResult
 from src.core.metadata import extract_media_info, MediaMetadata, clear_thumbnail_cache
 from src.core.downloader import MediaDownloader
 from src.utils.logger import log_info, log_error
+from src.utils.settings import get_setting
+from src.utils.notifications import notify_async
 
 class NexusFetchApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        ctk.set_appearance_mode("dark")
+        saved_theme = get_setting("theme", "dark")
+        ctk.set_appearance_mode(saved_theme)
         ctk.set_default_color_theme("dark-blue")
 
         self.title(f"{APP_NAME} v{APP_VERSION}")
@@ -77,7 +84,7 @@ class NexusFetchApp(ctk.CTk):
         self.bind_all("<Escape>", self._handle_global_escape)
 
     def _handle_global_paste(self, event=None):
-        if self.active_module != MODULE_CONVERTER:
+        if self.active_module not in (MODULE_CONVERTER, MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD):
             try:
                 self.url_bar.entry_url.focus_set()
             except Exception:
@@ -87,6 +94,12 @@ class NexusFetchApp(ctk.CTk):
         if self.active_module == MODULE_CONVERTER:
             if getattr(self.converter_view, "is_converting", False):
                 self.converter_view._cancel_conversion()
+        elif self.active_module == MODULE_COMPRESSOR:
+            if getattr(self.compressor_view, "is_compressing", False):
+                self.compressor_view._cancel_compression()
+        elif self.active_module == MODULE_MULTI_DOWNLOAD:
+            if getattr(self.multi_download_view, "is_downloading", False):
+                self.multi_download_view._cancel_download()
         else:
             if getattr(self.downloader, "is_downloading", False):
                 self._cancel_download()
@@ -208,6 +221,18 @@ class NexusFetchApp(ctk.CTk):
 
         # 3.5 Visão do Conversor de Mídia (Inicialmente oculta)
         self.converter_view = ConverterView(
+            self.scroll_area,
+            app_instance=self
+        )
+
+        # 3.6 Visão do Compressor Discord / WhatsApp (Inicialmente oculta)
+        self.compressor_view = CompressorView(
+            self.scroll_area,
+            app_instance=self
+        )
+
+        # 3.7 Visão de Multi-Download / Fila de Links (Inicialmente oculta)
+        self.multi_download_view = MultiDownloadView(
             self.scroll_area,
             app_instance=self
         )
@@ -343,18 +368,26 @@ class NexusFetchApp(ctk.CTk):
 
     def _on_module_changed(self, module_key: str):
         self.active_module = module_key
-        if module_key == MODULE_CONVERTER:
-            # Oculta interface do Downloader
+        # Oculta todas as views dedicadas primeiro
+        self.converter_view.pack_forget()
+        self.compressor_view.pack_forget()
+        self.multi_download_view.pack_forget()
+
+        if module_key in (MODULE_CONVERTER, MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD):
+            # Oculta interface do Downloader principal
             self.url_bar.pack_forget()
             self.welcome_card.pack_forget()
             self.preview_card.pack_forget()
             self.format_bar.pack_forget()
             self.action_section.pack_forget()
-            # Exibe o Conversor em tela cheia na área de conteúdo
-            self.converter_view.pack(fill="both", expand=True)
+            # Exibe a aba dedicada correspondente
+            if module_key == MODULE_CONVERTER:
+                self.converter_view.pack(fill="both", expand=True)
+            elif module_key == MODULE_COMPRESSOR:
+                self.compressor_view.pack(fill="both", expand=True)
+            else:
+                self.multi_download_view.pack(fill="both", expand=True)
         else:
-            # Oculta o Conversor
-            self.converter_view.pack_forget()
             # Restaura interface do Downloader
             self.action_section.pack(side="bottom", fill="x", pady=(12, 0))
             self.url_bar.pack(fill="x", pady=(0, 10))
@@ -469,6 +502,8 @@ class NexusFetchApp(ctk.CTk):
 
         def on_done(success, msg, path):
             self.run_on_ui(self.action_section.set_completed_state, success, msg, path)
+            if success:
+                notify_async("Nexus Fetch — Download Concluído", msg)
 
         self.downloader.download_async(
             url=self.current_metadata.url,

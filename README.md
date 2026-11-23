@@ -4,7 +4,7 @@
 > **Converta suas mídias com máxima qualidade e aceleração local nativa via FFmpeg.**  
 > Sem anúncios invasivos, sem pop-ups, sem redirecionamentos suspeitos e sem vírus.
 
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.2.1-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3-E50914.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen.svg)](https://www.python.org/)
 [![Plataformas](https://img.shields.io/badge/plataformas-Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/PatoDesoxigenado/NexusFetch/releases)
@@ -96,7 +96,10 @@ O **NexusFetch** nasceu para ser uma **alternativa definitiva, transparente e é
   - Download de fotos em resolução original máxima (`?name=orig`, incluindo imagens 4K) com suporte a **carrosséis seletivos**.
   - Download de vídeos e conversão nativa de animações para `.gif` (paleta otimizada de 256 cores).
 - **Tema Claro / Escuro & Auto-Updater:**
-  - Alternância nativa entre Modo Claro e Modo Escuro com logos oficiais em alta resolução.
+  - Menu suspenso **☰ (Mais Opções)** reunindo Tema Claro/Escuro, **Compressor (Discord & WhatsApp)** e **Multi-Download (Fila de Links)**.
+  - **Compressor Inteligente (v1.3):** comprime vídeos e áudios para caberem nos limites do Discord (10 MB / 50 MB) e WhatsApp (16 MB / 64 MB) com aceleração por GPU (NVENC/QSV/AMF), arrastar e soltar (*drag & drop*), FPS adaptativo e aviso preventivo de qualidade.
+  - **Multi-Download / Fila de Links (v1.3):** de 5 até 10 campos expansíveis com botão `+`, remoção e reordenação com `✖`, análise/validação prévia obrigatória e seletor individual de formato de saída por item.
+  - **Preferências Persistentes & Notificações Nativas (v1.3):** salva tema, pasta e qualidade preferida em `~/.nexusfetch/settings.json` e exibe notificações nativas do SO (Windows/Linux/macOS) ao concluir tarefas em segundo plano.
   - Atualizador automático em segundo plano com instalação segura in-place, rollback automático e pop-up visual de transição.
 - **Telemetria Suavizada:**
   - Cálculo de velocidade e tempo restante (ETA) com média móvel exponencial para eliminar picos falsos e exibir a velocidade real da sua rede.

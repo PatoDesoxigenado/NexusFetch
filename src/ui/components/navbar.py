@@ -13,11 +13,14 @@ from src.config import (
     MODULE_INSTAGRAM,
     MODULE_TWITTER,
     MODULE_CONVERTER,
+    MODULE_COMPRESSOR,
+    MODULE_MULTI_DOWNLOAD,
     LOGO_YOUTUBE_PATH,
     LOGO_INSTAGRAM_PATH,
     LOGO_TWITTER_PATH,
 )
 from src.utils.logger import log_warning
+from src.utils.settings import update_setting
 
 class NavBar(ctk.CTkFrame):
     def __init__(self, parent, on_module_selected: Callable[[str], None]):
@@ -35,6 +38,7 @@ class NavBar(ctk.CTkFrame):
         self.buttons: Dict[str, ctk.CTkButton] = {}
         self.module_keys = list(MODULES.keys())
         self.platform_icons: Dict[str, ctk.CTkImage] = {}
+        self._more_menu: Optional[ctk.CTkToplevel] = None
 
         self._create_theme_icons()
         self._load_platform_icons()
@@ -151,23 +155,6 @@ class NavBar(ctk.CTkFrame):
             corner_radius=Theme.CORNER_RADIUS_SM
         )
 
-        # Botão alternador de Tema (Claro / Escuro) com ícone centrado e nítido
-        curr_mode = ctk.get_appearance_mode().lower()
-        self.btn_theme = ctk.CTkButton(
-            self.nav_buttons_frame,
-            text="",
-            image=self.moon_icon if curr_mode == "light" else self.sun_icon,
-            width=38,
-            height=36,
-            fg_color=Theme.BG_CARD_LIGHT,
-            hover_color=Theme.SECONDARY_HOVER,
-            border_width=1,
-            border_color=Theme.BORDER_SUBTLE,
-            corner_radius=Theme.CORNER_RADIUS_SM,
-            command=self._toggle_theme
-        )
-        self.btn_theme.pack(side="left", padx=(0, 6))
-
         for mod_key, mod_info in MODULES.items():
             icon_img = self.platform_icons.get(mod_key)
             label_text = f" {mod_info['label']}" if icon_img else f"{mod_info['icon']}  {mod_info['label']}"
@@ -177,7 +164,7 @@ class NavBar(ctk.CTkFrame):
                 image=icon_img,
                 compound="left",
                 font=Theme.FONT_BUTTON,
-                width=135,
+                width=130,
                 height=36,
                 corner_radius=Theme.CORNER_RADIUS_SM,
                 command=lambda k=mod_key: self._on_btn_click(k)
@@ -185,14 +172,117 @@ class NavBar(ctk.CTkFrame):
             btn.pack(side="left", padx=3)
             self.buttons[mod_key] = btn
 
+        # Botão de Mais Opções (☰) ao lado de Conversor — abre menu suspenso (Compressor, Multi-Download, Tema)
+        self.btn_more = ctk.CTkButton(
+            self.nav_buttons_frame,
+            text="☰",
+            font=("Segoe UI", 16, "bold"),
+            width=40,
+            height=36,
+            fg_color=Theme.BG_CARD_LIGHT,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MAIN,
+            border_width=1,
+            border_color=Theme.BORDER_SUBTLE,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            command=self._toggle_more_menu
+        )
+        self.btn_more.pack(side="left", padx=(4, 0))
+
         self._update_button_styles()
 
+    def _toggle_more_menu(self):
+        """Abre ou fecha o menu suspenso de opções adicionais (Compressor, Multi-Download e Tema)."""
+        if self._more_menu is not None and self._more_menu.winfo_exists():
+            self._close_more_menu()
+            return
+
+        menu = ctk.CTkToplevel(self)
+        menu.overrideredirect(True)
+        menu.attributes("-topmost", True)
+        self._more_menu = menu
+
+        frame = ctk.CTkFrame(
+            menu,
+            fg_color=Theme.BG_CARD,
+            corner_radius=Theme.CORNER_RADIUS_SM,
+            border_width=1,
+            border_color=Theme.BORDER,
+        )
+        frame.pack(fill="both", expand=True)
+
+        curr_mode = ctk.get_appearance_mode().lower()
+        theme_label = "🌙  Modo Escuro" if curr_mode == "light" else "☀️  Modo Claro"
+
+        items = [
+            ("📦  Compressor (Discord / WhatsApp)", lambda: self._select_from_menu(MODULE_COMPRESSOR), self.current_module == MODULE_COMPRESSOR),
+            ("📋  Multi-Download (Fila de Links)", lambda: self._select_from_menu(MODULE_MULTI_DOWNLOAD), self.current_module == MODULE_MULTI_DOWNLOAD),
+        ]
+
+        for text, cmd, is_active in items:
+            ctk.CTkButton(
+                frame,
+                text=text,
+                font=Theme.FONT_BODY_BOLD if is_active else Theme.FONT_BODY,
+                fg_color=Theme.PRIMARY if is_active else "transparent",
+                hover_color=Theme.PRIMARY_HOVER if is_active else Theme.SECONDARY_HOVER,
+                text_color="#FFFFFF" if is_active else Theme.TEXT_MAIN,
+                anchor="w",
+                height=34,
+                width=245,
+                corner_radius=6,
+                command=cmd,
+            ).pack(fill="x", padx=6, pady=(6, 2))
+
+        sep = ctk.CTkFrame(frame, fg_color=Theme.BORDER_SUBTLE, height=1)
+        sep.pack(fill="x", padx=10, pady=6)
+
+        ctk.CTkButton(
+            frame,
+            text=theme_label,
+            font=Theme.FONT_BODY_BOLD,
+            fg_color="transparent",
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MAIN,
+            anchor="w",
+            height=34,
+            width=245,
+            corner_radius=6,
+            command=self._toggle_theme_from_menu,
+        ).pack(fill="x", padx=6, pady=(2, 6))
+
+        menu.update_idletasks()
+        menu_w = menu.winfo_reqwidth()
+        x = self.btn_more.winfo_rootx() + self.btn_more.winfo_width() - menu_w
+        y = self.btn_more.winfo_rooty() + self.btn_more.winfo_height() + 4
+        menu.geometry(f"+{max(0, x)}+{max(0, y)}")
+        menu.focus_force()
+        menu.bind("<FocusOut>", lambda e: self.after(120, self._close_more_menu))
+        menu.bind("<Escape>", lambda e: self._close_more_menu())
+
+    def _close_more_menu(self):
+        if self._more_menu is not None:
+            try:
+                if self._more_menu.winfo_exists():
+                    self._more_menu.destroy()
+            except Exception:
+                pass
+            self._more_menu = None
+
+    def _select_from_menu(self, module_key: str):
+        self._close_more_menu()
+        self._on_btn_click(module_key)
+
+    def _toggle_theme_from_menu(self):
+        self._close_more_menu()
+        self._toggle_theme()
+
     def _toggle_theme(self):
-        """Alterna dinamicamente entre Tema Claro e Tema Escuro."""
+        """Alterna dinamicamente entre Tema Claro e Tema Escuro e persiste em settings.json."""
         current_mode = ctk.get_appearance_mode().lower()
         new_mode = "light" if current_mode == "dark" else "dark"
         ctk.set_appearance_mode(new_mode)
-        self.btn_theme.configure(image=self.moon_icon if new_mode == "light" else self.sun_icon)
+        update_setting("theme", new_mode)
         self._update_button_styles()
 
     def show_update_button(
@@ -214,7 +304,11 @@ class NavBar(ctk.CTkFrame):
             self.btn_update.configure(command=command)
 
         if not self.btn_update.winfo_ismapped():
-            self.btn_update.pack(side="left", padx=(0, 6), before=self.btn_theme)
+            first_btn = self.buttons.get(MODULE_YOUTUBE)
+            if first_btn:
+                self.btn_update.pack(side="left", padx=(0, 6), before=first_btn)
+            else:
+                self.btn_update.pack(side="left", padx=(0, 6))
 
     def hide_update_button(self):
         """Oculta o botão de atualização."""
@@ -275,3 +369,21 @@ class NavBar(ctk.CTkFrame):
                         border_width=1,
                         border_color=Theme.BORDER_SUBTLE
                     )
+
+        if hasattr(self, "btn_more"):
+            is_extra_active = self.current_module in (MODULE_COMPRESSOR, MODULE_MULTI_DOWNLOAD)
+            if is_extra_active:
+                self.btn_more.configure(
+                    fg_color=Theme.PRIMARY,
+                    hover_color=Theme.PRIMARY_HOVER,
+                    text_color="#FFFFFF",
+                    border_width=0,
+                )
+            else:
+                self.btn_more.configure(
+                    fg_color=Theme.BG_CARD_LIGHT,
+                    hover_color=Theme.SECONDARY_HOVER,
+                    text_color=Theme.TEXT_MAIN,
+                    border_width=1,
+                    border_color=Theme.BORDER_SUBTLE,
+                )

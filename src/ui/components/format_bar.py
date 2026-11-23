@@ -7,6 +7,7 @@ from src.ui.theme import Theme
 from src.config import DEFAULT_DOWNLOAD_DIR
 from src.core.metadata import VideoQualityOption, MediaMetadata
 from src.utils.helpers import format_bytes
+from src.utils.settings import get_setting, update_setting
 
 class FormatSelectionBar(ctk.CTkFrame):
     def __init__(self, parent, on_options_changed: Optional[Callable[[], None]] = None):
@@ -18,9 +19,9 @@ class FormatSelectionBar(ctk.CTkFrame):
             border_color=Theme.BORDER
         )
         self.on_options_changed = on_options_changed
-        self.download_dir = DEFAULT_DOWNLOAD_DIR
+        self.download_dir = get_setting("download_dir", DEFAULT_DOWNLOAD_DIR)
         self.video_qualities: List[VideoQualityOption] = []
-        self.current_mode = "video"  # "video", "audio", "image", "gif"
+        self.current_mode = get_setting("preferred_format", "video")  # "video", "audio", "image", "gif"
         self.media_type = "video"
         self.estimated_audio_bytes = 0
 
@@ -156,20 +157,38 @@ class FormatSelectionBar(ctk.CTkFrame):
             self.opt_quality.configure(state="disabled")
 
         else:
-            # Caso padrão: Vídeo com faixa de áudio
-            self.current_mode = "video"
+            # Caso padrão: Vídeo com faixa de áudio (respeita preferências salvas)
+            pref_fmt = get_setting("preferred_format", "video")
+            pref_qual = str(get_setting("preferred_quality", "Máxima Resolução"))
             self.seg_format.configure(values=["🎬 Vídeo (MP4)", "🎵 Áudio (MP3)"])
-            self.seg_format.set("🎬 Vídeo (MP4)")
-            labels = [q.label for q in metadata.qualities] or ["🌟 Máxima Resolução"]
-            self.opt_quality.configure(values=labels)
-            self.opt_quality.set(labels[0])
-            self.opt_quality.configure(state="normal")
+
+            if pref_fmt == "audio":
+                self.current_mode = "audio"
+                self.seg_format.set("🎵 Áudio (MP3)")
+                audio_tag = f" ~ {format_bytes(self.estimated_audio_bytes)}" if self.estimated_audio_bytes > 0 else ""
+                audio_label = f"🎵 MP3 - 320 kbps (Qualidade Máxima){audio_tag}"
+                self.opt_quality.configure(values=[audio_label])
+                self.opt_quality.set(audio_label)
+                self.opt_quality.configure(state="disabled")
+            else:
+                self.current_mode = "video"
+                self.seg_format.set("🎬 Vídeo (MP4)")
+                labels = [q.label for q in metadata.qualities] or ["🌟 Máxima Resolução"]
+                self.opt_quality.configure(values=labels)
+                chosen_label = labels[0]
+                for lbl in labels:
+                    if pref_qual and pref_qual.lower() in lbl.lower():
+                        chosen_label = lbl
+                        break
+                self.opt_quality.set(chosen_label)
+                self.opt_quality.configure(state="normal")
 
         self._notify_change()
 
     def _on_format_changed(self, value: str):
         if "Áudio" in value:
             self.current_mode = "audio"
+            update_setting("preferred_format", "audio")
             audio_tag = f" ~ {format_bytes(self.estimated_audio_bytes)}" if self.estimated_audio_bytes > 0 else ""
             audio_label = f"🎵 MP3 - 320 kbps (Qualidade Máxima){audio_tag}"
             self.opt_quality.configure(values=[audio_label])
@@ -191,6 +210,7 @@ class FormatSelectionBar(ctk.CTkFrame):
 
         else:
             self.current_mode = "video"
+            update_setting("preferred_format", "video")
             labels = [q.label for q in self.video_qualities] or ["🌟 Máxima Resolução"]
             self.opt_quality.configure(values=labels)
             self.opt_quality.set(labels[0])
@@ -203,6 +223,7 @@ class FormatSelectionBar(ctk.CTkFrame):
         if chosen:
             self.download_dir = chosen
             self.lbl_path.configure(text=chosen)
+            update_setting("download_dir", chosen)
             self._notify_change()
 
     def get_selected_options(self) -> tuple[str, Optional[str], str]:
@@ -219,6 +240,9 @@ class FormatSelectionBar(ctk.CTkFrame):
             for q in self.video_qualities:
                 if q.label == selected_label:
                     format_id = q.format_id
+                    # Salva preferência de resolução (ex: "1080p", "2160p", "Máxima Resolução")
+                    pref_key = f"{q.height}p" if q.height else "Máxima Resolução"
+                    update_setting("preferred_quality", pref_key)
                     break
 
         return mode, format_id, self.download_dir

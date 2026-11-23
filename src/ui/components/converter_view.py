@@ -460,8 +460,8 @@ class ConverterView(ctk.CTkFrame):
             try:
                 import windnd
                 def on_drop(files):
-                    # Só processa se a aba ativa for o Conversor
-                    if getattr(self.app, "active_module", "") != "converter":
+                    active_mod = getattr(self.app, "active_module", "")
+                    if active_mod not in ("converter", "compressor"):
                         return
 
                     file_paths = []
@@ -475,7 +475,10 @@ class ConverterView(ctk.CTkFrame):
                         else:
                             file_paths.append(str(f))
 
-                    self.app.run_on_ui(self._add_files_from_paths, file_paths)
+                    if active_mod == "converter":
+                        self.app.run_on_ui(self._add_files_from_paths, file_paths)
+                    elif active_mod == "compressor" and hasattr(self.app, "compressor_view"):
+                        self.app.run_on_ui(self.app.compressor_view.add_files, file_paths)
 
                 # Hook na janela principal com force_unicode=True para suporte a caracteres especiais
                 windnd.hook_dropfiles(self.app, func=on_drop, force_unicode=True)
@@ -749,11 +752,14 @@ class ConverterView(ctk.CTkFrame):
 
                 if success == total and total > 0:
                     self.progress_bar.set(1.0)
+                    msg = f"Todos os {total} arquivo(s) foram convertidos com sucesso!"
                     self.lbl_status.configure(
-                        text=f"✅ Todos os {total} arquivo(s) foram convertidos com sucesso!",
+                        text=f"✅ {msg}",
                         text_color=Theme.SUCCESS
                     )
                     self.lbl_metrics.configure(text="Concluído 100%")
+                    from src.utils.notifications import notify_async
+                    notify_async("Nexus Fetch — Conversão Concluída", msg)
                 elif success > 0:
                     self.lbl_status.configure(
                         text=f"⚠️ {success} de {total} arquivo(s) convertidos. Alguns falharam.",
